@@ -1,0 +1,2380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>CellChat: The Game - Swarup Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#04070d;--bg2:#070d18;--glass:rgba(10,20,40,0.8);
+  --b1:rgba(56,155,255,0.12);--b2:rgba(56,155,255,0.25);
+  --ac:#389bff;--ac2:#00ffb3;
+  --tx:#cce0ff;--tx2:#6a90b8;--tx3:#2a4060;
+  --red:#ff4d6d;--amber:#ffb340;
+  --mono:'JetBrains Mono',monospace;--sans:'Space Grotesk',sans-serif
+}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--sans);overflow:hidden}
+canvas#nebula{position:fixed;inset:0;z-index:0;pointer-events:none}
+.grid-bg{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background-image:linear-gradient(rgba(56,155,255,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(56,155,255,0.025) 1px,transparent 1px);
+  background-size:48px 48px}
+.vig{position:fixed;inset:0;z-index:2;pointer-events:none;
+  background:radial-gradient(ellipse at center,transparent 30%,rgba(4,7,13,.9) 100%)}
+#mol-tip{position:fixed;z-index:600;background:rgba(5,11,22,.97);
+  border:1px solid var(--b2);border-radius:10px;padding:9px 13px;
+  max-width:220px;font-size:11px;line-height:1.6;color:var(--tx2);
+  pointer-events:none;display:none;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+#mol-tip strong{color:var(--ac2);font-size:12px;display:block;margin-bottom:3px}
+
+/* TUTORIAL */
+#tut{position:fixed;inset:0;z-index:300;background:rgba(4,7,13,.98);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0}
+.tdots{display:flex;gap:8px;margin-bottom:28px}
+.tdot{width:8px;height:8px;border-radius:50%;background:var(--tx3);transition:all .3s;cursor:pointer}
+.tdot.active{background:var(--ac2);box-shadow:0 0 8px var(--ac2);width:24px;border-radius:4px}
+.tdot.done{background:var(--ac)}
+.tslide{width:660px;max-width:92vw;background:rgba(10,20,40,.9);
+  border:1px solid var(--b2);border-radius:18px;padding:28px 32px;
+  position:relative;overflow:hidden;animation:slin .3s ease}
+@keyframes slin{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+.tslide::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--ac),var(--ac2));opacity:.7}
+.tnum{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--tx3);
+  font-family:var(--mono);margin-bottom:8px}
+.ttitle{font-size:24px;font-weight:700;color:#fff;margin-bottom:10px;line-height:1.2}
+.ttitle em{color:var(--ac2);font-style:normal}
+.tbody{font-size:14px;color:var(--tx2);line-height:1.75;margin-bottom:16px}
+.tbody strong{color:var(--tx)}.tbody em{color:var(--ac2);font-style:normal}
+.tdemo{background:rgba(4,7,13,.7);border:1px solid var(--b1);border-radius:10px;
+  padding:14px 16px;margin:12px 0}
+.tnav{display:flex;align-items:center;gap:10px;margin-top:18px}
+.tback{padding:9px 20px;background:transparent;border:1px solid var(--b2);border-radius:8px;
+  color:var(--tx2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .14s}
+.tback:hover{color:var(--tx);border-color:var(--tx2)}
+.tnext{padding:9px 26px;background:linear-gradient(135deg,rgba(56,155,255,.14),rgba(0,255,179,.09));
+  border:1px solid var(--ac2);border-radius:8px;color:var(--ac2);
+  font-family:var(--sans);font-size:13px;font-weight:600;cursor:pointer;
+  transition:all .16s;letter-spacing:.5px;margin-left:auto}
+.tnext:hover{background:linear-gradient(135deg,rgba(56,155,255,.24),rgba(0,255,179,.16));
+  box-shadow:0 0 20px rgba(0,255,179,.2)}
+.tskip{font-size:11px;color:var(--tx3);cursor:pointer;font-family:var(--mono);
+  text-decoration:underline;letter-spacing:.5px}
+.tskip:hover{color:var(--tx2)}
+.tkey{display:inline-block;padding:2px 8px;background:rgba(255,255,255,.05);
+  border:1px solid var(--b2);border-radius:4px;font-size:10px;font-family:var(--mono);color:var(--tx2)}
+.tgrid3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.tcell{padding:7px 8px;border-radius:7px;font-size:10px;background:rgba(0,0,0,.3)}
+.tcell strong{color:#fff;font-size:11px}
+.tcell small{color:var(--tx3);display:block;margin-top:2px;font-size:9px}
+.tscore-row{display:flex;gap:8px;flex-wrap:wrap}
+.tscore{padding:8px 12px;border:1px solid var(--b2);border-radius:8px;text-align:center}
+.tscore-val{font-family:var(--mono);font-size:20px;font-weight:700;display:block}
+.tscore-lbl{font-size:9px;color:var(--tx3);letter-spacing:1px;text-transform:uppercase}
+.tach-row{display:flex;gap:7px;flex-wrap:wrap}
+.tach{padding:5px 10px;border-radius:7px;font-size:11px;display:flex;align-items:center;gap:5px}
+.tach.on{border:1px solid var(--amber);color:var(--amber);background:rgba(255,179,64,.07)}
+.tach.off{border:1px solid var(--b1);color:var(--tx3)}
+.mock-q{font-size:12px;color:var(--tx2);font-weight:500;margin-bottom:8px}
+.mock-ch{padding:8px 12px;border-radius:7px;border:1px solid var(--b2);
+  font-size:12px;color:var(--tx2);margin-bottom:5px;background:rgba(10,20,40,.6)}
+.mock-ch.correct{border-color:var(--ac2);color:var(--ac2);background:rgba(0,255,179,.07)}
+.mock-ch.wrong{border-color:var(--red);color:var(--red);background:rgba(255,77,109,.07);opacity:.6}
+.mock-mol{font-size:9px;font-family:var(--mono);color:var(--tx3);margin-top:2px}
+.krow{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;
+  align-items:center;font-size:12px}
+.krow .tkey{white-space:nowrap}
+
+/* TITLE */
+#title{position:fixed;inset:0;z-index:200;display:none;
+  flex-direction:column;align-items:center;justify-content:center;gap:0;
+  background:rgba(4,7,13,.97)}
+.logo-big{font-size:52px;font-weight:700;letter-spacing:1px;color:#fff;text-align:center}
+.logo-big em{color:var(--ac2);font-style:normal}
+.logo-big span{color:var(--ac)}
+.logo-sub2{font-size:9px;letter-spacing:5px;color:var(--tx3);text-transform:uppercase;
+  margin:8px 0 12px;text-align:center}
+.title-hint{font-size:13px;color:var(--tx2);margin-bottom:18px;text-align:center;
+  max-width:860px;line-height:1.7}
+.title-hint small{font-size:11px;color:var(--tx3)}
+.cell-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;
+  width:min(900px,92vw);margin-bottom:22px}
+.csel{padding:12px 8px;border:1px solid var(--b2);border-radius:12px;
+  background:rgba(10,20,40,.7);cursor:pointer;transition:all .2s;text-align:center;
+  position:relative;overflow:hidden}
+.csel::before{content:'';position:absolute;inset:0;border-radius:12px;
+  background:radial-gradient(circle at 50% 0%,var(--cc,#389bff),transparent 70%);opacity:0;transition:opacity .2s}
+.csel:hover{border-color:var(--cc,var(--ac));transform:translateY(-3px);
+  box-shadow:0 6px 24px rgba(56,155,255,.15)}
+.csel:hover::before{opacity:.08}
+.csel.chosen{border-color:var(--cc,var(--ac));box-shadow:0 0 20px rgba(56,155,255,.3)}
+.csel.chosen::before{opacity:.1}
+.csel-emoji{font-size:26px;margin-bottom:6px}
+.csel-name{font-size:12px;font-weight:600;color:#fff}
+.csel-role{font-size:9px;color:var(--tx3);font-family:var(--mono);margin-top:2px}
+.csel-type{font-size:9px;margin-top:5px;padding:2px 6px;border-radius:8px;
+  background:rgba(56,155,255,.07);border:1px solid var(--cc,var(--ac));
+  color:var(--cc,var(--ac));display:inline-block;font-family:var(--mono)}
+.csel-pi{font-size:8px;padding:1px 5px;border-radius:3px;
+  background:rgba(240,171,252,.1);border:1px solid rgba(240,171,252,.3);
+  color:#f0abfc;font-family:var(--mono);display:inline-block;margin-top:3px}
+.start-btn{padding:13px 48px;
+  background:linear-gradient(135deg,rgba(56,155,255,.15),rgba(0,255,179,.1));
+  border:1px solid var(--ac2);border-radius:10px;
+  color:var(--ac2);font-family:var(--sans);font-size:15px;font-weight:600;
+  cursor:pointer;letter-spacing:1px;transition:all .2s}
+.start-btn:hover{background:linear-gradient(135deg,rgba(56,155,255,.25),rgba(0,255,179,.18));
+  box-shadow:0 0 28px rgba(0,255,179,.25);transform:scale(1.02)}
+.start-btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.title-keys{font-size:11px;color:var(--tx3);margin-top:10px;font-family:var(--mono)}
+
+/* GAME SHELL */
+#game{display:none;position:relative;z-index:10;
+  display:none;
+  grid-template-rows:54px 1fr 170px 44px;
+  grid-template-columns:240px 1fr 270px;
+  height:100vh;gap:1px;background:var(--b1)}
+
+/* HEADER */
+#hdr{grid-column:1/-1;background:rgba(4,7,13,.97);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--b2);
+  display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+  position:relative}
+#hdr::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--ac) 30%,var(--ac2) 70%,transparent);opacity:.5}
+.hlogo{display:flex;flex-direction:column;gap:1px}
+.hlogo-main{font-size:15px;font-weight:700;letter-spacing:1px;color:#fff}
+.hlogo-main em{color:var(--ac2);font-style:normal}
+.hlogo-sub{font-size:9px;letter-spacing:4px;color:var(--tx3);text-transform:uppercase}
+.hcenter{display:flex;align-items:center;gap:10px}
+.score-pill{display:flex;align-items:center;gap:5px;padding:4px 13px;
+  background:rgba(0,255,179,.07);border:1px solid rgba(0,255,179,.2);border-radius:20px}
+.score-n{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--ac2)}
+.score-l{font-size:9px;letter-spacing:2px;color:var(--tx3);text-transform:uppercase}
+.streak-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;
+  background:rgba(255,179,64,.07);border:1px solid rgba(255,179,64,.2);border-radius:20px}
+.streak-n{font-family:var(--mono);font-size:16px;color:var(--amber)}
+.streak-l{font-size:9px;color:var(--tx3);letter-spacing:1px}
+.lvl-badge{padding:4px 12px;background:rgba(56,155,255,.08);
+  border:1px solid var(--b2);border-radius:20px;
+  font-size:11px;font-family:var(--mono);color:var(--ac);letter-spacing:1px}
+.hright{display:flex;align-items:center;gap:8px}
+#timer{font-family:var(--mono);font-size:24px;font-weight:500;color:var(--amber);
+  letter-spacing:3px;text-shadow:0 0 16px rgba(255,179,64,.3)}
+#timer.urg{color:var(--red);animation:urg .7s ease-in-out infinite}
+@keyframes urg{0%,100%{opacity:1}50%{opacity:.35}}
+.hbtn{height:28px;padding:0 11px;background:transparent;border:1px solid var(--b2);
+  border-radius:6px;color:var(--tx2);font-family:var(--sans);font-size:10px;
+  font-weight:500;cursor:pointer;transition:all .14s}
+.hbtn:hover{border-color:var(--ac);color:var(--ac)}
+.hbtn.red{border-color:rgba(255,77,109,.3);color:var(--red)}
+.hbtn.red:hover{border-color:var(--red)}
+
+/* LEFT ROSTER */
+#roster{background:var(--glass);backdrop-filter:blur(14px);
+  border-right:1px solid var(--b1);overflow-y:auto;
+  padding:10px 8px;display:flex;flex-direction:column;gap:4px}
+#roster::-webkit-scrollbar{width:2px}
+#roster::-webkit-scrollbar-thumb{background:var(--b2)}
+.ph{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--tx3);
+  padding:2px 4px 6px;display:flex;align-items:center;gap:5px}
+.ph::after{content:'';flex:1;height:1px;background:var(--b1)}
+.cc{border:1px solid var(--b1);border-radius:10px;padding:8px 9px;
+  cursor:pointer;transition:all .16s;position:relative;overflow:hidden;
+  background:rgba(10,20,40,.5)}
+.cc::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--cc,var(--ac));border-radius:3px 0 0 3px;opacity:.7}
+.cc:hover{border-color:var(--cc,var(--ac));transform:translateX(2px)}
+.cc.talking{animation:cg .5s ease-in-out infinite alternate}
+@keyframes cg{from{box-shadow:none}to{box-shadow:0 0 14px var(--cc,var(--ac));border-color:var(--cc,var(--ac))}}
+.cc.you{border-color:var(--cc,var(--ac));background:rgba(56,155,255,.05)}
+.cct{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.cav{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:14px;flex-shrink:0;border:1px solid var(--cc,var(--ac))}
+.cn{font-size:12px;font-weight:600;color:#fff}
+.cr{font-size:9px;color:var(--tx3);font-family:var(--mono)}
+.cbadge{font-size:9px;padding:1px 7px;border-radius:8px;display:inline-block;
+  background:rgba(56,155,255,.07);border:1px solid var(--cc,var(--ac));
+  color:var(--cc,var(--ac));font-family:var(--mono)}
+.cst{font-size:9px;color:var(--tx3);font-family:var(--mono);
+  padding-top:5px;border-top:1px solid var(--b1);margin-top:4px;
+  display:flex;align-items:center;gap:4px}
+.csd{width:4px;height:4px;border-radius:50%;background:var(--tx3);flex-shrink:0}
+.cst.sp{color:var(--cc,var(--ac));animation:sb .6s step-end infinite}
+.cst.sp .csd{background:var(--cc,var(--ac));box-shadow:0 0 5px var(--cc,var(--ac))}
+@keyframes sb{0%,100%{opacity:1}50%{opacity:.2}}
+.ytag{font-size:8px;padding:1px 5px;border-radius:3px;
+  background:rgba(0,255,179,.1);border:1px solid rgba(0,255,179,.25);
+  color:var(--ac2);font-family:var(--mono);margin-left:3px}
+
+/* CENTER */
+#stage{background:var(--bg);position:relative;overflow:hidden}
+#sigc{position:absolute;inset:0;pointer-events:none;z-index:5}
+.fbub{position:absolute;cursor:pointer;z-index:10}
+.finn{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:23px;position:relative;transition:box-shadow .3s}
+.fr1{position:absolute;inset:-4px;border-radius:50%;border:1.5px solid var(--cc,#389bff);opacity:.5}
+.fr2{position:absolute;inset:-11px;border-radius:50%;border:1px solid var(--cc,#389bff);
+  opacity:.15;animation:rp 2.5s ease-in-out infinite}
+.fr3{position:absolute;inset:-19px;border-radius:50%;border:1px solid var(--cc,#389bff);
+  opacity:.07;animation:rp 2.5s ease-in-out infinite .6s}
+@keyframes rp{0%,100%{transform:scale(1);opacity:.15}50%{transform:scale(1.05);opacity:.26}}
+.fbub.pulsing .finn{animation:fp .45s ease-in-out infinite alternate}
+@keyframes fp{from{box-shadow:0 0 8px var(--cc,#389bff)}to{box-shadow:0 0 26px var(--cc,#389bff),0 0 50px var(--cc,#389bff)}}
+.fbub.you-cell .finn{border-width:2.5px!important}
+.fnm{position:absolute;top:-22px;left:50%;transform:translateX(-50%);
+  font-size:11px;font-weight:600;color:#fff;white-space:nowrap;text-shadow:0 1px 6px rgba(0,0,0,.9)}
+.ftp{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+  font-size:9px;white-space:nowrap;font-family:var(--mono);
+  color:var(--cc,#389bff);text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.rpop{position:absolute;z-index:30;font-size:22px;pointer-events:none;
+  animation:rpp 1.8s ease-out forwards}
+@keyframes rpp{0%{opacity:0;transform:scale(.5) translateY(0)}
+  20%{opacity:1;transform:scale(1.2) translateY(-10px)}
+  60%{opacity:1;transform:scale(1) translateY(-30px)}
+  100%{opacity:0;transform:scale(.8) translateY(-65px)}}
+.sbub{position:absolute;z-index:20;max-width:190px;background:rgba(5,11,22,.94);
+  border-radius:12px 12px 12px 3px;padding:9px 12px;font-size:12px;
+  line-height:1.55;color:var(--tx);pointer-events:none;
+  animation:sbin .25s cubic-bezier(.34,1.56,.64,1) forwards}
+.sbub::before{content:'';position:absolute;bottom:-7px;left:14px;width:11px;height:11px;
+  background:rgba(5,11,22,.94);border-right:1px solid;border-bottom:1px solid;transform:rotate(45deg)}
+@keyframes sbin{from{opacity:0;transform:scale(.82) translateY(8px)}to{opacity:1;transform:none}}
+
+/* MISSION BOX */
+#mbox{grid-column:1/-1;background:rgba(4,7,13,.96);backdrop-filter:blur(12px);
+  border-top:1px solid var(--b2);padding:10px 18px;
+  display:flex;flex-direction:column;gap:7px;overflow:hidden}
+.mtop{display:flex;align-items:center;gap:12px}
+.mlbl{font-size:9px;letter-spacing:3px;text-transform:uppercase;
+  color:var(--tx3);white-space:nowrap}
+.mtitle{font-size:14px;font-weight:600;color:#fff;flex:1}
+.mpwrap{display:flex;align-items:center;gap:7px}
+.mpbar-bg{width:110px;height:4px;background:var(--bg2);border-radius:2px;overflow:hidden}
+.mpbar{height:100%;border-radius:2px;background:var(--ac2);transition:width .4s}
+.mptxt{font-size:10px;font-family:var(--mono);color:var(--tx2)}
+.mdesc{font-size:12px;color:var(--tx2);line-height:1.5}
+.choices{display:flex;gap:7px;flex-wrap:wrap}
+.ch{padding:8px 13px;background:rgba(10,20,40,.7);
+  border:1px solid var(--b2);border-radius:8px;
+  color:var(--tx2);font-family:var(--sans);font-size:12px;
+  cursor:pointer;transition:all .14s;flex:1;min-width:140px;text-align:left}
+.ch:hover:not(:disabled){border-color:var(--ac);color:var(--tx);background:rgba(56,155,255,.06)}
+.ch:disabled{opacity:.4;cursor:not-allowed}
+.ch.correct{border-color:var(--ac2)!important;color:var(--ac2)!important;
+  background:rgba(0,255,179,.08)!important;animation:cf .5s ease}
+.ch.wrong{border-color:var(--red)!important;color:var(--red)!important;
+  background:rgba(255,77,109,.08)!important;animation:wf .4s ease}
+@keyframes cf{0%{box-shadow:none}50%{box-shadow:0 0 22px rgba(0,255,179,.45)}100%{box-shadow:none}}
+@keyframes wf{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.ch-mol{font-size:9px;color:var(--tx3);font-family:var(--mono);margin-top:2px}
+
+/* RIGHT PANEL */
+#rpanel{background:var(--glass);backdrop-filter:blur(14px);
+  border-left:1px solid var(--b1);display:flex;flex-direction:column;overflow:hidden}
+.rps{padding:9px 12px;border-bottom:1px solid var(--b1)}
+.rpl{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--tx3);
+  margin-bottom:6px;display:flex;align-items:center;gap:5px}
+.rpl::after{content:'';flex:1;height:1px;background:var(--b1)}
+.xprow{display:flex;justify-content:space-between;font-size:10px;
+  color:var(--tx3);font-family:var(--mono);margin-bottom:4px}
+.xpbg{height:5px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.xpbar{height:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--ac),var(--ac2));transition:width .5s}
+.ach-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.ach{padding:6px 8px;border:1px solid var(--b1);border-radius:7px;
+  display:flex;align-items:center;gap:5px;transition:all .2s}
+.ach.on{border-color:var(--amber);background:rgba(255,179,64,.06)}
+.ach.off{opacity:.35}
+.ach-e{font-size:14px}
+.ach-n{font-size:10px;font-weight:500;color:var(--tx2)}
+.ach.on .ach-n{color:var(--amber)}
+.ach-d{font-size:9px;color:var(--tx3)}
+.sb2{width:100%;padding:6px 8px;background:rgba(10,20,40,.5);
+  border:1px solid var(--b1);border-radius:7px;
+  color:var(--tx2);font-family:var(--sans);font-size:11px;
+  text-align:left;cursor:pointer;transition:all .13s;margin-bottom:3px;
+  display:flex;align-items:center;gap:6px}
+.sb2:hover,.sb2.asc{border-color:var(--bc,var(--ac));color:var(--tx)}
+.sb2.asc{background:rgba(56,155,255,.05)}
+.sb2-icon{font-size:13px}
+.sb2-cat{font-size:8px;padding:1px 5px;border-radius:5px;font-family:var(--mono);margin-left:auto}
+.cl{background:rgba(0,255,179,.07);color:var(--ac2);border:1px solid rgba(0,255,179,.18)}
+.cd{background:rgba(255,77,109,.07);color:var(--red);border:1px solid rgba(255,77,109,.18)}
+.csep{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);
+  margin:7px 0 5px;padding-top:7px;border-top:1px solid var(--b1)}
+
+/* STATS */
+#stats{grid-column:1/-1;background:rgba(4,7,13,.99);border-top:1px solid var(--b2);
+  display:flex;align-items:center;position:relative}
+#stats::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--ac2) 40%,var(--ac) 60%,transparent);opacity:.3}
+.si{flex:1;text-align:center;padding:5px 4px;border-right:1px solid var(--b1)}
+.si:last-child{border-right:none}
+.sv{font-family:var(--mono);font-size:17px;font-weight:500;color:#fff;display:block;line-height:1}
+.sl{font-size:8px;color:var(--tx3);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+
+/* SCORE POPUP */
+.spop{position:fixed;z-index:500;pointer-events:none;font-family:var(--mono);
+  font-size:22px;font-weight:700;text-shadow:0 0 14px currentColor;
+  animation:spop 1.4s ease-out forwards}
+@keyframes spop{0%{opacity:0;transform:scale(.6) translateY(0)}
+  15%{opacity:1;transform:scale(1.2) translateY(-10px)}
+  60%{opacity:1;transform:scale(1) translateY(-50px)}
+  100%{opacity:0;transform:scale(.9) translateY(-90px)}}
+
+/* ACHIEVEMENT TOAST */
+.atst{position:fixed;top:66px;right:18px;z-index:800;padding:9px 14px;
+  background:rgba(5,11,22,.97);border:1px solid var(--amber);border-radius:10px;
+  display:flex;align-items:center;gap:9px;
+  animation:atin .4s cubic-bezier(.34,1.56,.64,1)}
+.atst.out{animation:atout .4s ease forwards}
+@keyframes atin{from{opacity:0;transform:translateX(60px)}to{opacity:1;transform:none}}
+@keyframes atout{from{opacity:1;transform:none}to{opacity:0;transform:translateX(60px)}}
+.at-e{font-size:18px}
+.at-n{font-size:12px;color:var(--amber);font-weight:500}
+.at-d{font-size:10px;color:var(--tx3)}
+
+/* HELP OVERLAY */
+#help{display:none;position:fixed;inset:0;z-index:400;
+  background:rgba(4,7,13,.93);backdrop-filter:blur(16px);
+  align-items:center;justify-content:center}
+#help.show{display:flex}
+.hpanel{width:680px;max-width:95vw;max-height:88vh;overflow-y:auto;
+  background:rgba(10,20,40,.95);border:1px solid var(--b2);
+  border-radius:16px;padding:26px 30px;position:relative}
+.hpanel::-webkit-scrollbar{width:3px}
+.hpanel::-webkit-scrollbar-thumb{background:var(--b2)}
+.hclose{position:absolute;top:12px;right:12px;width:26px;height:26px;
+  border-radius:50%;border:1px solid var(--b2);background:transparent;
+  color:var(--tx2);cursor:pointer;font-size:13px;transition:all .14s;
+  display:flex;align-items:center;justify-content:center}
+.hclose:hover{border-color:var(--red);color:var(--red)}
+.htitle{font-size:19px;font-weight:700;color:#fff;margin-bottom:18px}
+.htitle em{color:var(--ac2);font-style:normal}
+.hgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hcard{background:rgba(4,7,13,.7);border:1px solid var(--b1);border-radius:9px;padding:11px 13px}
+.hcard-t{font-size:12px;font-weight:600;color:var(--ac2);margin-bottom:5px}
+.hcard-b{font-size:11px;color:var(--tx2);line-height:1.65}
+.hcard-b strong{color:var(--tx)}
+.hfull{grid-column:1/-1}
+.hsep{grid-column:1/-1;height:1px;background:var(--b1);margin:2px 0}
+.hkrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px}
+.hk{padding:2px 8px;background:rgba(255,255,255,.04);border:1px solid var(--b2);
+  border-radius:4px;font-size:10px;font-family:var(--mono);color:var(--tx2)}
+.scen-info{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:11px;color:var(--tx2)}
+
+/* WIN/LOSE */
+.fovl{display:none;position:fixed;inset:0;z-index:9999;
+  background:rgba(4,7,13,.97);backdrop-filter:blur(20px);
+  align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.fovl.show{display:flex}
+.ovl-t{font-size:50px;font-weight:700;letter-spacing:8px;font-family:var(--mono)}
+.win .ovl-t{color:var(--ac2);text-shadow:0 0 40px rgba(0,255,179,.5)}
+.lose .ovl-t{color:var(--red);text-shadow:0 0 40px rgba(255,77,109,.5)}
+.ovl-s{font-size:13px;color:var(--tx2);letter-spacing:1px;max-width:420px;text-align:center;line-height:1.8}
+.ovl-stats{display:flex;gap:20px;margin:8px 0}
+.ovl-stat-v{font-family:var(--mono);font-size:30px;font-weight:700;color:var(--ac2)}
+.ovl-stat-l{font-size:10px;color:var(--tx3);letter-spacing:2px;text-transform:uppercase}
+.ovl-achs{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;max-width:400px}
+.ovl-ach{padding:4px 10px;background:rgba(255,179,64,.1);
+  border:1px solid rgba(255,179,64,.3);border-radius:6px;font-size:11px;color:var(--amber)}
+.ovl-btn{padding:11px 34px;background:transparent;border:1px solid var(--ac);
+  border-radius:8px;color:var(--ac);font-family:var(--mono);font-size:12px;
+  letter-spacing:3px;cursor:pointer;transition:all .15s;margin-top:4px}
+.ovl-btn:hover{background:var(--ac);color:var(--bg)}
+
+.hint-btn{padding:5px 13px;background:transparent;border:1px solid rgba(255,179,64,.35);border-radius:20px;color:var(--amber);font-family:var(--sans);font-size:11px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.hint-btn:hover:not(:disabled){background:rgba(255,179,64,.1)}
+.hint-btn:disabled{opacity:.35;cursor:not-allowed}
+.hint-count{font-family:var(--mono);font-weight:600}
+.hint-box{display:none;background:rgba(255,179,64,.07);border:1px solid rgba(255,179,64,.3);border-radius:10px;padding:10px 14px;font-size:12px;color:#fde68a;line-height:1.65;animation:hintIn .3s ease;flex-basis:100%;margin-top:2px}
+.hint-box.show{display:block}
+@keyframes hintIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+#level-select{position:fixed;inset:0;z-index:190;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(4,7,13,.98)}
+.ls-title{font-size:28px;font-weight:700;color:#fff;text-align:center;margin-bottom:5px}
+.ls-title em{color:var(--ac2);font-style:normal}
+.ls-sub{font-size:12px;color:var(--tx3);letter-spacing:3px;text-transform:uppercase;margin-bottom:28px}
+.level-cards{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;max-width:900px;width:95vw}
+.lcard{flex:1;min-width:145px;max-width:168px;padding:18px 13px;border-radius:14px;cursor:pointer;border:1px solid var(--b2);background:rgba(10,20,40,.7);text-align:center;transition:all .2s;position:relative;overflow:hidden}
+.lcard::before{content:'';position:absolute;inset:0;border-radius:14px;background:radial-gradient(circle at 50% 0%,var(--lc,#389bff),transparent 70%);opacity:0;transition:opacity .2s}
+.lcard:hover{border-color:var(--lc,var(--ac));transform:translateY(-4px);box-shadow:0 8px 28px rgba(56,155,255,.15)}
+.lcard:hover::before{opacity:.1}
+.lcard.locked{opacity:.45;cursor:not-allowed}
+.lcard.locked:hover{transform:none;box-shadow:none}
+.lcard-icon{font-size:30px;margin-bottom:7px}
+.lcard-num{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--lc,var(--tx3));font-family:var(--mono);margin-bottom:3px}
+.lcard-name{font-size:13px;font-weight:600;color:#fff;margin-bottom:3px}
+.lcard-theme{font-size:10px;color:var(--tx3);margin-bottom:7px}
+.lcard-pts{font-size:10px;font-family:var(--mono);margin-bottom:3px}
+.lcard-missions{font-size:10px;color:var(--tx3)}
+.lcard-done{position:absolute;top:9px;right:9px;font-size:15px}
+.ls-back{margin-top:22px;padding:9px 26px;background:transparent;border:1px solid var(--b2);border-radius:8px;color:var(--tx2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .14s}
+.ls-back:hover{border-color:var(--tx2);color:var(--tx)}
+#level-banner{display:none;position:fixed;top:0;left:0;right:0;z-index:800;align-items:center;justify-content:center;background:rgba(4,7,13,.97);border-bottom:1px solid var(--b2);padding:18px;flex-direction:column;gap:5px;animation:bannerIn .4s cubic-bezier(.34,1.2,.64,1)}
+@keyframes bannerIn{from{opacity:0;transform:translateY(-40px)}to{opacity:1;transform:none}}
+#level-banner.show{display:flex}
+.lbanner-label{font-size:9px;letter-spacing:4px;text-transform:uppercase;color:var(--tx3);font-family:var(--mono)}
+.lbanner-name{font-size:28px;font-weight:700;color:#fff}
+.lbanner-name em{font-style:normal;color:var(--ac2)}
+.lbanner-theme{font-size:12px;color:var(--tx2)}
+.lbanner-mult{font-size:11px;font-family:var(--mono);padding:3px 12px;border-radius:20px;border:1px solid var(--b2);color:var(--ac2)}
+.lbanner-btn{margin-top:7px;padding:8px 26px;background:transparent;border:1px solid var(--b2);border-radius:8px;color:var(--tx2);font-family:var(--sans);font-size:12px;cursor:pointer;transition:all .14s}
+.lbanner-btn:hover{border-color:var(--ac);color:var(--ac)}
+#hlevel-wrap{display:flex;align-items:center;gap:6px;padding:4px 12px;border:1px solid var(--b2);border-radius:20px;font-size:11px;font-family:var(--mono)}
+#hlevel-icon{font-size:14px}
+#hlevel-name{color:var(--tx2)}
+.rp-tabs{display:flex;border-bottom:1px solid var(--b1)}
+.rp-tab{flex:1;padding:7px 4px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);cursor:pointer;border:none;background:transparent;font-family:var(--sans);border-bottom:2px solid transparent;transition:all .14s}
+.rp-tab:hover{color:var(--tx2)}
+.rp-tab.active{color:var(--ac2);border-bottom-color:var(--ac2)}
+.rp-tab-pane{display:none;overflow-y:auto;flex:1}
+.rp-tab-pane.active{display:flex;flex-direction:column}
+.disorder-card{padding:9px 10px;border:1px solid var(--b1);border-radius:10px;cursor:pointer;transition:all .16s;background:rgba(10,20,40,.5);margin-bottom:5px;position:relative;overflow:hidden}
+.disorder-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--dc,var(--ac));border-radius:3px 0 0 3px;opacity:.7}
+.disorder-card:hover{border-color:var(--dc,var(--ac));background:rgba(56,155,255,.04);transform:translateX(2px)}
+.disorder-card.active-disorder{border-color:var(--dc,var(--ac));background:rgba(56,155,255,.07);box-shadow:0 0 12px rgba(56,155,255,.12)}
+.dc-top{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.dc-icon{font-size:18px;flex-shrink:0}
+.dc-name{font-size:12px;font-weight:600;color:#fff}
+.dc-type{font-size:9px;font-family:var(--mono);margin-top:1px}
+.dc-cat{font-size:8px;padding:1px 6px;border-radius:5px;font-family:var(--mono)}
+.dc-desc{font-size:10px;color:var(--tx3);line-height:1.5;margin-bottom:5px}
+.dc-cells{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px}
+.dc-cell-tag{font-size:9px;padding:1px 6px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid var(--b1);color:var(--tx3)}
+.dc-mols{display:flex;gap:4px;flex-wrap:wrap}
+.dc-mol-tag{font-size:9px;padding:1px 6px;border-radius:8px;background:var(--dc,var(--ac))11;border:1px solid var(--dc,var(--ac))33;color:var(--dc,var(--ac));font-family:var(--mono);cursor:pointer}
+.dc-mol-tag:hover{background:var(--dc,var(--ac))22}
+.dc-missions{font-size:9px;color:var(--tx3);margin-top:4px;padding-top:4px;border-top:1px solid var(--b1);font-family:var(--mono)}
+.lab-scen-btn{width:100%;padding:6px 8px;background:rgba(10,20,40,.5);border:1px solid var(--b1);border-radius:7px;color:var(--tx2);font-family:var(--sans);font-size:11px;text-align:left;cursor:pointer;transition:all .13s;margin-bottom:3px;display:flex;align-items:center;gap:6px}
+.lab-scen-btn:hover,.lab-scen-btn.active-scen{border-color:var(--bc,var(--ac));color:var(--tx)}
+.lab-scen-btn.active-scen{background:rgba(56,155,255,.05)}
+.lsb-cat{font-size:8px;padding:1px 5px;border-radius:5px;font-family:var(--mono)}
+.lsb-count{font-size:9px;color:var(--tx3);font-family:var(--mono)}
+
+
+/* ── DISORDER FOCUS SCREEN ───────────────────────────────── */
+#disorder-select {
+  position: fixed; inset: 0; z-index: 185;
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: rgba(4,7,13,.98); padding: 20px;
+}
+.ds-title { font-size: 26px; font-weight: 700; color: #fff;
+  text-align: center; margin-bottom: 4px; }
+.ds-title em { color: var(--ac2); font-style: normal; }
+.ds-sub { font-size: 11px; color: var(--tx3); letter-spacing: 3px;
+  text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+.ds-hint { font-size: 12px; color: var(--tx2); margin-bottom: 22px;
+  text-align: center; max-width: 560px; line-height: 1.6; }
+.ds-grid { display: grid; grid-template-columns: repeat(5,1fr);
+  gap: 10px; width: min(900px,95vw); margin-bottom: 18px; }
+.ds-card {
+  padding: 16px 12px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--b2); background: rgba(10,20,40,.7);
+  text-align: center; transition: all .2s; position: relative;
+}
+.ds-card::before { content:''; position:absolute; inset:0; border-radius:12px;
+  background: radial-gradient(circle at 50% 0%, var(--dc,#389bff), transparent 70%);
+  opacity:0; transition:opacity .2s; }
+.ds-card:hover { border-color: var(--dc,var(--ac)); transform: translateY(-3px);
+  box-shadow: 0 6px 24px rgba(56,155,255,.15); }
+.ds-card:hover::before { opacity:.1; }
+.ds-card.chosen-disorder { border-color: var(--dc,var(--ac));
+  box-shadow: 0 0 22px var(--dc,var(--ac))44; background: rgba(56,155,255,.07); }
+.ds-card.chosen-disorder::before { opacity:.14; }
+.ds-icon { font-size: 28px; margin-bottom: 8px; }
+.ds-name { font-size: 12px; font-weight: 600; color: #fff; margin-bottom: 3px; }
+.ds-type { font-size: 9px; color: var(--tx3); font-family: var(--mono); margin-bottom: 6px; }
+.ds-count { font-size: 10px; font-family: var(--mono); padding: 2px 8px;
+  border-radius: 10px; display: inline-block; margin-bottom: 5px; }
+.ds-mols { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+.ds-mol { font-size: 8px; padding: 1px 5px; border-radius: 6px;
+  background: var(--dc,var(--ac))11; border: 1px solid var(--dc,var(--ac))33;
+  color: var(--dc,var(--ac)); font-family: var(--mono); }
+.ds-nav { display: flex; gap: 12px; align-items: center; margin-top: 6px; }
+.ds-back { padding: 9px 22px; background: transparent; border: 1px solid var(--b2);
+  border-radius: 8px; color: var(--tx2); font-family: var(--sans); font-size: 12px;
+  cursor: pointer; transition: all .14s; }
+.ds-back:hover { border-color: var(--tx2); color: var(--tx); }
+.ds-start { padding: 11px 34px;
+  background: linear-gradient(135deg,rgba(56,155,255,.14),rgba(0,255,179,.09));
+  border: 1px solid var(--ac2); border-radius: 8px; color: var(--ac2);
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .16s; letter-spacing: .5px; }
+.ds-start:hover { background: linear-gradient(135deg,rgba(56,155,255,.24),rgba(0,255,179,.16));
+  box-shadow: 0 0 20px rgba(0,255,179,.2); }
+.ds-start:disabled { opacity: .3; cursor: not-allowed; }
+/* ── RIGHT PANEL DISORDER CARDS (in-game) ─────────────────── */
+.rp-disorder-card {
+  padding: 9px 10px; border: 1px solid var(--b1); border-radius: 10px;
+  cursor: pointer; transition: all .16s; background: rgba(10,20,40,.5);
+  margin-bottom: 6px; position: relative; overflow: hidden;
+}
+.rp-disorder-card::before { content:''; position:absolute; left:0; top:0; bottom:0;
+  width:3px; background:var(--dc,var(--ac)); border-radius:3px 0 0 3px; opacity:.7; }
+.rp-disorder-card:hover { border-color:var(--dc,var(--ac));
+  background:rgba(56,155,255,.04); transform:translateX(2px); }
+.rp-disorder-card.active-dc { border-color:var(--dc,var(--ac));
+  background:rgba(56,155,255,.07); box-shadow:0 0 10px var(--dc,var(--ac))22; }
+.rp-dc-header { display:flex; align-items:center; gap:7px; margin-bottom:4px; }
+.rp-dc-icon { font-size:16px; flex-shrink:0; }
+.rp-dc-name { font-size:11px; font-weight:600; color:#fff; flex:1; }
+.rp-dc-badge { font-size:8px; padding:1px 6px; border-radius:5px;
+  font-family:var(--mono); flex-shrink:0; }
+.rp-dc-desc { font-size:10px; color:var(--tx3); line-height:1.45; margin-bottom:5px; }
+.rp-dc-cells { display:flex; gap:3px; flex-wrap:wrap; margin-bottom:4px; }
+.rp-dc-cell { font-size:9px; padding:1px 5px; border-radius:6px;
+  background:rgba(255,255,255,.04); border:1px solid var(--b1); color:var(--tx3); }
+.rp-dc-mols { display:flex; gap:3px; flex-wrap:wrap; margin-bottom:4px; }
+.rp-dc-mol { font-size:9px; padding:1px 5px; border-radius:6px;
+  background:var(--dc,var(--ac))11; border:1px solid var(--dc,var(--ac))33;
+  color:var(--dc,var(--ac)); font-family:var(--mono); cursor:pointer; }
+.rp-dc-mol:hover { background:var(--dc,var(--ac))22; }
+.rp-dc-footer { display:flex; align-items:center; justify-content:space-between;
+  padding-top:4px; border-top:1px solid var(--b1); }
+.rp-dc-count { font-size:9px; font-family:var(--mono); color:var(--tx3); }
+.rp-dc-jump { font-size:9px; color:var(--ac2); cursor:pointer;
+  text-decoration:underline; background:none; border:none; font-family:var(--sans); }
+.rp-dc-facts { font-size:9px; color:var(--tx3); line-height:1.55;
+  padding:5px 0 2px; }
+/* ── ACTIVE FOCUS BANNER (top of right panel) ─────────────── */
+.focus-banner {
+  display:none; padding:6px 10px; margin-bottom:0;
+  background:rgba(0,255,179,.07); border-bottom:1px solid rgba(0,255,179,.2);
+  font-size:10px; color:var(--ac2); font-family:var(--mono);
+  align-items:center; gap:6px;
+}
+.focus-banner.show { display:flex; }
+.focus-banner-icon { font-size:14px; }
+.focus-banner-clear { margin-left:auto; font-size:10px; cursor:pointer;
+  color:var(--tx3); text-decoration:underline; background:none;
+  border:none; font-family:var(--mono); }
+.focus-banner-clear:hover { color:var(--tx2); }
+
+</style>
+</head>
+<body>
+<canvas id="nebula"></canvas>
+<div class="grid-bg"></div>
+<div class="vig"></div>
+<div id="mol-tip"></div>
+
+
+<!-- DISORDER FOCUS SELECT -->
+<div id="disorder-select">
+  <div class="ds-title">Choose Your <em>Brain Disorder Focus</em></div>
+  <div class="ds-sub">Optional &middot; play targeted questions</div>
+  <div class="ds-hint">
+    Select a brain disorder to focus your game session on its specific questions and molecular pathways.<br>
+    Or choose <strong>All Scenarios</strong> to play the full mixed game.
+  </div>
+  <div class="ds-grid" id="ds-grid"></div>
+  <div class="ds-nav">
+    <button class="ds-back" onclick="showLevelSelect()">&#8592; Back to levels</button>
+    <button class="ds-start" id="ds-start-btn" onclick="confirmDisorderAndStart()">Play All Scenarios &#8594;</button>
+  </div>
+</div>
+
+<div id="level-select">
+  <div class="ls-title">Choose Your <em>Game Level</em></div>
+  <div class="ls-sub">Select difficulty &middot; harder levels multiply your points</div>
+  <div class="level-cards" id="level-cards"></div>
+  <button class="ls-back" onclick="showTitle()">&#8592; Back to cell selection</button>
+</div>
+<div id="level-banner">
+  <div class="lbanner-label">NOW ENTERING</div>
+  <div class="lbanner-name" id="lbanner-name">Level 1</div>
+  <div class="lbanner-theme" id="lbanner-theme"></div>
+  <div class="lbanner-mult" id="lbanner-mult"></div>
+  <button class="lbanner-btn" onclick="dismissBanner()">Let&apos;s go &rarr;</button>
+</div>
+<!-- TUTORIAL -->
+<div id="tut">
+  <div class="tdots" id="tdots"></div>
+  <div id="tslide"></div>
+</div>
+
+<!-- TITLE -->
+<div id="title">
+  <div class="logo-big">Cell<em>Chat</em><span>: The Game</span></div>
+  <div class="logo-sub2">Swarup Lab &middot; UCI MIND &middot; ZotCraft 2026</div>
+  <div class="title-hint">
+    Choose your Swarup Lab member. Answer molecular questions. Save the brain.<br>
+    <small>All 11 lab members available &middot; click or use &larr;&rarr; arrow keys to select</small>
+  </div>
+  <div class="cell-grid" id="cell-grid"></div>
+  <button class="start-btn" id="start-btn" onclick="showLevelSelect()" disabled>Choose a cell to begin</button>
+  <div class="title-keys">&#8592; &#8594; to navigate &nbsp;&middot;&nbsp; Enter to start</div>
+</div>
+
+<!-- GAME -->
+<div id="game">
+  <div id="hdr">
+    <div class="hlogo">
+      <div class="hlogo-main">Cell<em>Chat</em>: The Game</div>
+      <div class="hlogo-sub">Swarup Lab &middot; UCI MIND &middot; ZotCraft 2026</div>
+    </div>
+    <div class="hcenter">
+      <div class="score-pill">
+        <div class="score-n" id="score-n">0</div>
+        <div class="score-l">Score</div>
+      </div>
+      <div class="streak-pill">
+        <div class="streak-n" id="streak-n">&times;1</div>
+        <div class="streak-l">Streak</div>
+      </div>
+      <div id="hlevel-wrap"><span id="hlevel-icon">&#127749;</span><span id="lvl">L1</span><span id="hlevel-name">Awakening</span></div>
+      <div id="mround" style="font-size:10px;font-family:var(--mono);color:var(--tx3)">mission 0</div>
+    </div>
+    <div class="hright">
+      <div id="timer">45:00</div>
+      <button class="hbtn" onclick="pauseResume()" id="pbtn">&#9208; Pause</button>
+      <button class="hbtn" onclick="toggleHelp()">? Help</button>
+      <button class="hbtn red" onclick="endGame()">&#10005; End</button>
+    </div>
+  </div>
+  <div id="roster"><div class="ph">Lab cast</div></div>
+  <div id="stage"><canvas id="sigc"></canvas></div>
+  <div id="mbox">
+    <div class="mtop">
+      <div class="mlbl">Mission</div>
+      <div class="mtitle" id="mtitle">Initializing&hellip;</div>
+      <div class="mpwrap">
+        <div class="mpbar-bg"><div class="mpbar" id="mpbar" style="width:0%"></div></div>
+        <div class="mptxt" id="mptxt">0/0</div>
+      </div>
+    </div>
+    <div class="mdesc" id="mdesc">Get ready&hellip;</div>
+    <div class="choices" id="choices"></div>
+  </div>
+  <div id="rpanel">
+    <div class="rps">
+      <div class="rpl">Progress</div>
+      <div class="xprow"><span>XP</span><span id="xptxt">0 / 100</span></div>
+      <div class="xpbg"><div class="xpbar" id="xpbar" style="width:0%"></div></div>
+    </div>
+    <div class="focus-banner" id="focus-banner"></div>
+    <div class="rp-tabs">
+      <button class="rp-tab active" onclick="switchTab('disorders')" id="tab-disorders">&#129504; Disorders</button>
+      <button class="rp-tab" onclick="switchTab('lab')" id="tab-lab">&#128300; Lab</button>
+      <button class="rp-tab" onclick="switchTab('ach')" id="tab-ach">&#127942; Awards</button>
+    </div>
+    <div class="rp-tab-pane active" id="pane-disorders" style="padding:8px 10px;overflow-y:auto;flex:1">
+      <div id="disorder-list"></div>
+    </div>
+    <div class="rp-tab-pane" id="pane-lab" style="padding:8px 10px;overflow-y:auto;flex:1">
+      <div id="scenlist"></div>
+    </div>
+    <div class="rp-tab-pane" id="pane-ach" style="padding:8px 10px;overflow-y:auto;flex:1">
+      <div class="ach-grid" id="achgrid"></div>
+    </div>
+  </div>
+  <div id="stats">
+    <div class="si"><span class="sv" id="sc">0</span><div class="sl">Correct</div></div>
+    <div class="si"><span class="sv" id="sw">0</span><div class="sl">Wrong</div></div>
+    <div class="si"><span class="sv" id="ss">0</span><div class="sl">Best Streak</div></div>
+    <div class="si"><span class="sv" id="sm">0</span><div class="sl">Messages</div></div>
+    <div class="si"><span class="sv" id="sscen" style="font-size:12px">-</span><div class="sl">Scenario</div></div>
+  </div>
+</div>
+
+<!-- WIN -->
+<div class="fovl win" id="win">
+  <div class="ovl-t">MISSION COMPLETE</div>
+  <div class="ovl-s">You kept the brain alive. The lab is proud.<br>Swarup Lab &middot; UCI MIND &middot; ZotCraft 2026</div>
+  <div class="ovl-stats">
+    <div><div class="ovl-stat-v" id="fs">0</div><div class="ovl-stat-l">Final Score</div></div>
+    <div><div class="ovl-stat-v" id="fc">0</div><div class="ovl-stat-l">Correct</div></div>
+    <div><div class="ovl-stat-v" id="fst">0</div><div class="ovl-stat-l">Best Streak</div></div>
+  </div>
+  <div class="ovl-achs" id="wachs"></div>
+  <button class="ovl-btn" onclick="location.reload()">PLAY AGAIN</button>
+</div>
+
+<!-- LOSE -->
+<div class="fovl lose" id="lose">
+  <div class="ovl-t">TIME'S UP</div>
+  <div class="ovl-s">The cells went quiet. The lab auto-locks at midnight.</div>
+  <div class="ovl-stats">
+    <div><div class="ovl-stat-v" id="fs2">0</div><div class="ovl-stat-l">Final Score</div></div>
+    <div><div class="ovl-stat-v" id="fc2">0</div><div class="ovl-stat-l">Correct</div></div>
+  </div>
+  <button class="ovl-btn" onclick="location.reload()">TRY AGAIN</button>
+</div>
+
+<!-- HELP -->
+<div id="help">
+  <div class="hpanel">
+    <button class="hclose" onclick="toggleHelp()">&#10005;</button>
+    <div class="htitle">How to play <em>CellChat: The Game</em></div>
+    <div class="hgrid">
+      <div class="hcard"><div class="hcard-t">&#127919; Objective</div>
+        <div class="hcard-b">Complete all <strong>18 missions</strong> before the 45-minute timer runs out. Each mission asks a neuroscience question &mdash; answer correctly to earn points and keep your streak alive.</div></div>
+      <div class="hcard"><div class="hcard-t">&#129514; Your Cell</div>
+        <div class="hcard-b">You play as one of <strong>11 Swarup Lab members</strong>, each mapped to a unique cell type. Your cell is marked <strong>YOU</strong> on stage and in the roster.</div></div>
+      <div class="hcard"><div class="hcard-t">&#128203; Missions</div>
+        <div class="hcard-b">Each mission shows a narration from one cell to another, then a <strong>4-choice science question</strong>. Read the narration carefully &mdash; it always contains a clue.</div></div>
+      <div class="hcard"><div class="hcard-t">&#9889; Speed Bonus</div>
+        <div class="hcard-b">Answer within <strong>3 seconds</strong> to earn an extra <strong>+50 points</strong>. Watch for the &#9889; icon on your score popup.</div></div>
+      <div class="hcard"><div class="hcard-t">&#128293; Streak Bonus</div>
+        <div class="hcard-b">Each consecutive correct answer adds <strong>streak &times; 20</strong> bonus points. One wrong answer resets your streak to &times;1.</div></div>
+      <div class="hcard"><div class="hcard-t">&#127942; Scoring</div>
+        <div class="hcard-b"><strong>L1:</strong> 100pts &nbsp;<strong>L2:</strong> 150pts &nbsp;<strong>L3:</strong> 175pts &nbsp;<strong>L4:</strong> 225pts &nbsp;<strong>L5:</strong> 250&ndash;300pts. Plus speed and streak bonuses.</div></div>
+      <div class="hsep"></div>
+      <div class="hfull">
+        <div class="hcard-t" style="margin-bottom:7px">&#128506; Scenarios</div>
+        <div class="scen-info">
+          <div>&#128293; <strong>Inflammation</strong> &mdash; NF-&kappa;B, cytokines</div>
+          <div>&#128168; <strong>Oxygen crisis</strong> &mdash; HIF-1&alpha;, hypoxia</div>
+          <div>&#129504; <strong>Memory &amp; LTP</strong> &mdash; CaMKII, Arc, BDNF</div>
+          <div>&#9889; <strong>Axon injury</strong> &mdash; Wallerian, CSPG</div>
+          <div>&#128300; <strong>Baf53b mutant</strong> &mdash; BAF complex (Swarup Lab!)</div>
+          <div>&#129513; <strong>Alzheimer&apos;s</strong> &mdash; A&beta;, tau, ApoE4</div>
+          <div>&#129528; <strong>Parkinson&apos;s</strong> &mdash; &alpha;-syn, dopamine</div>
+          <div>&#127744; <strong>Schizophrenia</strong> &mdash; D2, NMDA, E/I</div>
+          <div>&#127752; <strong>Autism</strong> &mdash; FMRP, SHANK3, mGluR5</div>
+        </div>
+      </div>
+      <div class="hsep"></div>
+      <div class="hfull">
+        <div class="hcard-t" style="margin-bottom:6px">&#9000; Keyboard shortcuts</div>
+        <div class="hkrow">
+          <span class="hk">1&ndash;4</span><span style="font-size:11px;color:var(--tx3)">Select answer</span>
+          <span class="hk">H</span><span style="font-size:11px;color:var(--tx3)">Toggle help</span>
+          <span class="hk">P</span><span style="font-size:11px;color:var(--tx3)">Pause/Resume</span>
+          <span class="hk">F</span><span style="font-size:11px;color:var(--tx3)">Fullscreen</span>
+          <span class="hk">Esc</span><span style="font-size:11px;color:var(--tx3)">Close overlays</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<script>
+const CELLS = [
+  {id:'neuron',    emoji:'🧠', name:'Madhu',    role:'Specialist',  type:'Pyramidal Neuron',      color:'#a78bfa', bg:'rgba(167,139,250,0.18)', status:'firing synapses',   fact:'Pyramidal neurons make up ~80% of all cortical neurons and are the primary output cells.'},
+  {id:'astro',     emoji:'⭐', name:'Negin',    role:'PhD Student', type:'Astrocyte',             color:'#fbbf24', bg:'rgba(251,191,36,0.18)',  status:'buffering ions',    fact:'Astrocytes outnumber neurons 5:1 and contact up to 2 million synapses simultaneously.'},
+  {id:'micro',     emoji:'🔍', name:'Nellie',   role:'PhD Student', type:'Microglia',             color:'#fb923c', bg:'rgba(251,146,60,0.18)',  status:'surveilling',       fact:'Microglia patrol their entire brain territory every few hours, sensing all changes.'},
+  {id:'oligo',     emoji:'🔵', name:'Luis',     role:'PhD Student', type:'Oligodendrocyte',       color:'#38bdf8', bg:'rgba(56,189,248,0.18)',  status:'myelinating',       fact:'One oligodendrocyte can myelinate up to 50 axon segments, boosting speed 100x.'},
+  {id:'endo',      emoji:'🩸', name:'Ze',       role:'PhD Student', type:'Endothelial Cell',      color:'#34d399', bg:'rgba(52,211,153,0.18)',  status:'regulating flow',   fact:'The brain has ~400 miles of blood vessels. Endothelial cells control all brain entry.'},
+  {id:'immune',    emoji:'🛡️', name:'Kristen',  role:'PhD Student', type:'T-Cell / Immune',       color:'#f87171', bg:'rgba(248,113,113,0.18)', status:'patrolling',        fact:'T-cells regularly patrol the meninges and CSF — the brain is not immune-privileged.'},
+  {id:'inter',     emoji:'⚡', name:'Nora',     role:'PhD Student', type:'GABAergic Interneuron', color:'#c084fc', bg:'rgba(192,132,252,0.18)', status:'inhibiting',        fact:'GABAergic interneurons are the brain\'s brakes, preventing runaway excitation.'},
+  {id:'dopa',      emoji:'💜', name:'Veronica', role:'PhD Student', type:'Dopaminergic Neuron',   color:'#e879f9', bg:'rgba(232,121,249,0.18)', status:'releasing dopamine', fact:'Dopaminergic neurons in the VTA and substantia nigra control reward and motor control.'},
+  {id:'syn',       emoji:'💻', name:'Das',      role:'Postdoc',     type:'Synaptic Analyst',      color:'#60a5fa', bg:'rgba(96,165,250,0.18)',  status:'analyzing vesicles', fact:'Synaptic vesicles release neurotransmitters via SNARE complex in under 1 millisecond.'},
+  {id:'gaba',      emoji:'⚗️', name:'Johnny',   role:'PhD Student', type:'GABAergic Neuron',      color:'#4ade80', bg:'rgba(74,222,128,0.18)',  status:'releasing GABA',    fact:'GABA is the primary inhibitory neurotransmitter — ~20% of all brain synapses are GABAergic.'},
+  {id:'pi',        emoji:'👨‍🔬', name:'Swarup',   role:'Lab PI',      type:'Principal Investigator',color:'#f0abfc', bg:'rgba(240,171,252,0.18)', status:'supervising',       fact:'The PI orchestrates grants, experimental design, and keeps all 10 cells in check.'},
+];
+
+const MOLECULES = {
+  'NF-kB':   'Master transcription factor for inflammation. Activates 200+ pro-inflammatory genes.',
+  'BDNF':    'Brain-Derived Neurotrophic Factor. Essential for LTP, memory consolidation, and survival.',
+  'Arc':     'Activity-Regulated Cytoskeleton gene. Absolutely required for long-term memory formation.',
+  'CaMKII':  'Ca2+/calmodulin-dependent kinase II. Autophosphorylates to lock in LTP permanently.',
+  'HIF-1a':  'Hypoxia-Inducible Factor. Activates 100+ genes to adapt cells to low oxygen.',
+  'BAF53b':  'Actl6b subunit of BAF chromatin remodeling complex. Critical for neuron gene expression.',
+  'AMPA':    'AMPA receptors mediate fast excitatory transmission. Their density sets synaptic strength.',
+  'NMDA':    'NMDA receptors need glutamate AND depolarization — they detect synaptic coincidences.',
+  'tau':     'Microtubule-associated protein. Hyperphosphorylated tau forms tangles in Alzheimer\'s.',
+  'GABA':    'Gamma-aminobutyric acid. Primary inhibitory neurotransmitter in the brain.',
+  'SNARE':   'Protein complex mediating vesicle fusion and neurotransmitter release in <1 millisecond.',
+  'CMAP':    'Connectivity Map. Links drug perturbations to transcriptomic signatures for repurposing.',
+  'ApoE4':   'Strongest genetic risk factor for late-onset Alzheimer\'s. Impairs amyloid clearance.',
+  'LRRK2':   'Leucine-rich repeat kinase 2. Most common genetic cause of Parkinson\'s disease.',
+  'FMRP':    'Fragile X Mental Retardation Protein. Translational repressor at synapses.',
+  'SHANK3':  'Postsynaptic scaffold protein. SHANK3 mutations cause Phelan-McDermid syndrome.',
+};
+
+const REACTIONS = {
+  neuron:['💡','⚡','🔥','✨'], astro:['⭐','💛','🌟','✨'],
+  micro:['👀','🔍','⚠️','🚨'], oligo:['🔵','💙','🛡️','✅'],
+  endo:['🩸','💚','🌊','✅'], immune:['🛡️','⚔️','🚨','💪'],
+  inter:['⚡','🔋','🚦','✅'], dopa:['💜','🎯','✨','💫'],
+  syn:['💻','🔬','📊','✅'], gaba:['⚗️','🧪','⚖️','✅'],
+  pi:['👨‍🔬','🏆','📄','🎓'],
+};
+
+const SLIDES = [
+  { step:'INTRO · 1/7', title:'Welcome to <em>CellChat: The Game</em>',
+    body:'You are entering a living brain simulation used by the <strong>Swarup Lab at UCI MIND</strong>. Brain cells have things to say to each other. Your job is to <em>understand their molecular language</em> and keep the brain alive. 18 missions across 9 biological scenarios await.',
+    demo:'<div class="tdemo"><div style="display:flex;flex-direction:column;gap:8px">' +
+      '<div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(167,139,250,0.18);border:1.5px solid #a78bfa">🧠</div><div><div style="font-size:12px;font-weight:600;color:#fff">Madhu — Pyramidal Neuron</div><div style="font-size:10px;color:var(--tx3);font-family:var(--mono)">Specialist</div></div></div>' +
+      '<div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(251,191,36,0.18);border:1.5px solid #fbbf24">⭐</div><div><div style="font-size:12px;font-weight:600;color:#fff">Negin — Astrocyte</div><div style="font-size:10px;color:var(--tx3);font-family:var(--mono)">PhD Student</div></div></div>' +
+      '<div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(240,171,252,0.18);border:1.5px solid #f0abfc">👨‍🔬</div><div><div style="font-size:12px;font-weight:600;color:#fff">Swarup — Principal Investigator</div><div style="font-size:10px;color:var(--tx3);font-family:var(--mono)">Lab PI</div></div></div>' +
+      '</div></div>' },
+
+  { step:'SETUP · 2/7', title:'Step 1: <em>Choose your cell</em>',
+    body:'After this tutorial you reach the <strong>Title Screen</strong> with all 11 Swarup Lab members. Pick one to play as. Your cell gets a <em>YOU label</em> on stage, appears highlighted in the roster, and is the focus of signal animations.',
+    demo:'<div class="tdemo"><div class="tgrid3">' +
+      '<div class="tcell" style="border:1px solid #a78bfa44"><span style="font-size:16px">🧠</span> <strong>Madhu</strong><small>Pyramidal Neuron</small></div>' +
+      '<div class="tcell" style="border:1px solid #fbbf2444"><span style="font-size:16px">⭐</span> <strong>Negin</strong><small>Astrocyte</small></div>' +
+      '<div class="tcell" style="border:1px solid #fb923c44"><span style="font-size:16px">🔍</span> <strong>Nellie</strong><small>Microglia</small></div>' +
+      '<div class="tcell" style="border:1px solid #38bdf844"><span style="font-size:16px">🔵</span> <strong>Luis</strong><small>Oligodendrocyte</small></div>' +
+      '<div class="tcell" style="border:1px solid #34d39944"><span style="font-size:16px">🩸</span> <strong>Ze</strong><small>Endothelial Cell</small></div>' +
+      '<div class="tcell" style="border:1px solid #f8717144"><span style="font-size:16px">🛡️</span> <strong>Kristen</strong><small>T-Cell / Immune</small></div>' +
+      '<div class="tcell" style="border:1px solid #c084fc44"><span style="font-size:16px">⚡</span> <strong>Nora</strong><small>GABAergic Interneuron</small></div>' +
+      '<div class="tcell" style="border:1px solid #e879f944"><span style="font-size:16px">💜</span> <strong>Veronica</strong><small>Dopaminergic Neuron</small></div>' +
+      '<div class="tcell" style="border:1px solid #60a5fa44"><span style="font-size:16px">💻</span> <strong>Das</strong><small>Synaptic Analyst</small></div>' +
+      '<div class="tcell" style="border:1px solid #4ade8044"><span style="font-size:16px">⚗️</span> <strong>Johnny</strong><small>GABAergic Neuron</small></div>' +
+      '<div class="tcell" style="border:1px solid #f0abfc44;grid-column:span 2"><span style="font-size:16px">👨‍🔬</span> <strong>Swarup</strong> <span style="font-size:8px;color:#f0abfc;border:1px solid #f0abfc44;border-radius:3px;padding:1px 4px;font-family:monospace">PI</span><small>Principal Investigator</small></div>' +
+      '</div><div style="font-size:11px;color:var(--tx3);margin-top:6px;font-family:var(--mono)">← → arrow keys or click · Enter to confirm</div></div>' },
+
+  { step:'GAMEPLAY · 3/7', title:'Step 2: <em>Watch the mission narration</em>',
+    body:'Every mission starts with a <strong>speech bubble</strong> from one cell to another — with an animated signal line on stage. Read the narration carefully. It sets up the biology for the question. <em>The narration always contains a clue.</em>',
+    demo:'<div class="tdemo"><div style="font-size:10px;color:var(--tx3);font-family:var(--mono);margin-bottom:8px">MISSION: The alarm goes off</div>' +
+      '<div style="display:flex;align-items:flex-start;gap:10px">' +
+      '<div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;background:rgba(248,113,113,0.18);border:1.5px solid #f87171;flex-shrink:0">🛡️</div>' +
+      '<div style="background:rgba(5,11,22,.9);border:1px solid #f8717177;border-radius:12px 12px 12px 3px;padding:9px 12px;font-size:12px;color:var(--tx);line-height:1.55;flex:1">Kristen just detected damage signals in the tissue. What activated the inflammatory cascade?<div style="font-size:10px;color:var(--tx3);margin-top:4px;font-family:var(--mono)">Kristen → Nellie</div></div>' +
+      '</div></div>' },
+
+  { step:'GAMEPLAY · 4/7', title:'Step 3: <em>Answer the question</em>',
+    body:'After the narration, <strong>4 answer choices</strong> appear. Each shows a molecule name in small text. <em>Correct</em> → green flash, points added, streak continues. <em>Wrong</em> → red shake, correct answer revealed, streak resets. Press <span class="tkey">1</span><span class="tkey">2</span><span class="tkey">3</span><span class="tkey">4</span> to answer without clicking.',
+    demo:'<div class="tdemo"><div class="mock-q">What transcription factor is the master switch for inflammation?</div>' +
+      '<div class="mock-ch correct">NF-kB — activates 200+ inflammatory genes when DAMPs are detected<div class="mock-mol">NF-kB</div></div>' +
+      '<div class="mock-ch wrong">CREB — memory-related transcription factor activated by calcium<div class="mock-mol">CREB</div></div>' +
+      '<div class="mock-ch">HIF-1a — responds to oxygen levels, not inflammatory signals<div class="mock-mol">HIF-1a</div></div>' +
+      '<div class="mock-ch">p53 — tumor suppressor, unrelated to acute inflammation</div>' +
+      '</div>' },
+
+  { step:'SCORING · 5/7', title:'Step 4: <em>Score, streaks &amp; bonuses</em>',
+    body:'Every correct answer earns <strong>base points</strong> (100–300 by level). Bonuses stack on top: <em>⚡ Speed:</em> answer in under 3 sec → +50. <em>🔥 Streak:</em> consecutive correct → +streak×20. <em>📈 XP:</em> fills your level bar each answer.',
+    demo:'<div class="tdemo"><div class="tscore-row">' +
+      '<div class="tscore"><span class="tscore-val" style="color:var(--ac2)">+150</span><div class="tscore-lbl">Base</div></div>' +
+      '<div class="tscore"><span class="tscore-val" style="color:var(--amber)">+50⚡</span><div class="tscore-lbl">Speed</div></div>' +
+      '<div class="tscore"><span class="tscore-val" style="color:#f87171">+60🔥</span><div class="tscore-lbl">Streak×3</div></div>' +
+      '<div class="tscore" style="border-color:var(--ac2)"><span class="tscore-val" style="color:var(--ac2)">260</span><div class="tscore-lbl">Total</div></div>' +
+      '</div><div style="font-size:11px;color:var(--tx3);margin-top:8px">Wrong answer → streak resets to ×1, no bonus points</div></div>' },
+
+  { step:'PROGRESS · 6/7', title:'Step 5: <em>Achievements &amp; XP</em>',
+    body:'There are <strong>8 achievements</strong> to unlock as you play — they appear as toast notifications. The <strong>XP bar</strong> fills each answer and resets every level. Complete all 18 missions to reach the <em>Mission Complete</em> screen.',
+    demo:'<div class="tdemo"><div class="tach-row">' +
+      '<div class="tach on">⚡ First Spark</div>' +
+      '<div class="tach on">🔥 On Fire</div>' +
+      '<div class="tach on">🔬 Baf53b Expert</div>' +
+      '<div class="tach off">🌟 Unstoppable</div>' +
+      '<div class="tach off">🏆 High Scorer</div>' +
+      '<div class="tach off">👨‍🔬 PI Approved</div>' +
+      '</div><div style="margin-top:10px;font-size:10px;color:var(--tx3)">XP PROGRESS</div>' +
+      '<div style="height:5px;background:rgba(255,255,255,.06);border-radius:3px;margin-top:5px;overflow:hidden"><div style="width:67%;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));border-radius:3px"></div></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-top:3px;font-family:var(--mono)"><span>67 XP</span><span>100 XP</span></div></div>' },
+
+  { step:'CONTROLS · 7/7', title:'Step 6: <em>Controls &amp; tips</em>',
+    body:'Ready to play! A few last things: click any <strong>cell bubble</strong> for a neuroscience fact. Use the <strong>right panel</strong> to jump to any scenario. Press <em>H</em> to reopen this guide. Press <em>F</em> for fullscreen on the projector. You have 45 minutes. 18 missions. <em>Go save the brain.</em>',
+    demo:'<div class="tdemo"><div class="krow">' +
+      '<span class="tkey">1 – 4</span><span style="color:var(--tx2)">Select answer choice instantly</span>' +
+      '<span class="tkey">H</span><span style="color:var(--tx2)">Open / close help guide</span>' +
+      '<span class="tkey">P</span><span style="color:var(--tx2)">Pause and resume game</span>' +
+      '<span class="tkey">F</span><span style="color:var(--tx2)">Toggle fullscreen</span>' +
+      '<span class="tkey">← →</span><span style="color:var(--tx2)">Navigate cell selection</span>' +
+      '<span class="tkey">Enter</span><span style="color:var(--tx2)">Confirm selection / start</span>' +
+      '<span class="tkey">Esc</span><span style="color:var(--tx2)">Close any overlay</span>' +
+      '</div></div>' },
+];
+
+const GAME_LEVELS = [
+  { id:1, name:'The Awakening',     theme:'Brain comes online',   color:'#389bff', bg:'rgba(56,155,255,0.06)',  icon:'🌅', desc:'Basic cell biology and signaling. Learn who each cell is and what they do.',            timeBonus:0,    hintCost:0,   pointMult:1.0 },
+  { id:2, name:'Synaptic Storm',    theme:'Learning & memory',    color:'#a78bfa', bg:'rgba(167,139,250,0.06)', icon:'⚡', desc:'Molecular mechanisms of LTP, memory consolidation, and chromatin regulation.',       timeBonus:120,  hintCost:15,  pointMult:1.2 },
+  { id:3, name:'Crisis Mode',       theme:'Injury & inflammation',color:'#f87171', bg:'rgba(248,113,113,0.06)', icon:'🚨', desc:'Brain under attack. Axon injury, oxygen crisis, and inflammatory cascades.',          timeBonus:180,  hintCost:20,  pointMult:1.5 },
+  { id:4, name:'Disease Ward',      theme:'Neurological disease', color:'#fbbf24', bg:'rgba(251,191,36,0.06)',  icon:'🏥', desc:'Alzheimer\'s, Parkinson\'s, Schizophrenia. The hardest molecular questions.',          timeBonus:240,  hintCost:25,  pointMult:1.8 },
+  { id:5, name:'Swarup\'s Lab',     theme:'Research frontier',    color:'#00ffb3', bg:'rgba(0,255,179,0.06)',   icon:'🔬', desc:'Baf53b, Autism, and cutting-edge research from UCI MIND. Master tier.',                timeBonus:300,  hintCost:30,  pointMult:2.0 },
+];
+
+const MISSIONS = [
+
+  // ══ GAME LEVEL 1: THE AWAKENING ══════════════════════════════
+  { sc:'inflammation', gameLevel:1,
+    title:'The alarm goes off',
+    narr:'Kristen just detected damage signals. Something triggered the inflammatory cascade.',
+    speaker:'immune', listener:'micro',
+    q:'What transcription factor is the master switch for the inflammatory response?',
+    hint:'Think: Nuclear Factor. It\'s two letters followed by the Greek letter kappa and the letter B. It activates over 200 inflammatory genes.',
+    choices:[
+      {t:'NF-kB — activates 200+ inflammatory genes when DAMPs are detected', mol:'NF-kB', ok:true},
+      {t:'CREB — memory-related factor activated by calcium signaling', mol:'CREB', ok:false},
+      {t:'HIF-1a — responds to oxygen levels, not inflammatory signals', mol:'HIF-1a', ok:false},
+      {t:'p53 — tumor suppressor, unrelated to acute inflammation', mol:null, ok:false},
+    ], xp:20, pts:100},
+
+  { sc:'oxygen', gameLevel:1,
+    title:'Ze calls the emergency',
+    narr:'Ze detected critical hypoxia in sector 5. Madhu is losing action potential amplitude.',
+    speaker:'endo', listener:'neuron',
+    q:'Which transcription factor activates the cell\'s entire oxygen-deprivation response?',
+    hint:'HIF stands for Hypoxia-Inducible Factor. When oxygen drops, this protein stabilizes and turns on 100+ survival genes.',
+    choices:[
+      {t:'HIF-1a — Hypoxia-Inducible Factor, activates 100+ survival genes', mol:'HIF-1a', ok:true},
+      {t:'NF-kB — inflammatory master switch, not an oxygen sensor', mol:'NF-kB', ok:false},
+      {t:'BDNF — neurotrophic factor for growth, not hypoxia response', mol:'BDNF', ok:false},
+      {t:'Arc — immediate early gene for memory, not oxygen stress', mol:'Arc', ok:false},
+    ], xp:20, pts:100},
+
+  { sc:'inflammation', gameLevel:1,
+    title:'Negin buffers the storm',
+    narr:'Madhu is firing uncontrollably during inflammation. Negin must clear excess neurotransmitter.',
+    speaker:'astro', listener:'neuron',
+    q:'Which transporter does Negin (Astrocyte) use to remove excess glutamate from the synapse?',
+    hint:'Astrocytes express the Glutamate Transporter 1. Its abbreviation is three letters: G-L-T. It prevents excitotoxicity by clearing glutamate in milliseconds.',
+    choices:[
+      {t:'GLT-1 — removes glutamate within milliseconds, preventing excitotoxicity', mol:null, ok:true},
+      {t:'AMPA receptor — receives glutamate but cannot clear it', mol:'AMPA', ok:false},
+      {t:'NMDA receptor — coincidence detector for LTP, not a clearance transporter', mol:'NMDA', ok:false},
+      {t:'Dopamine transporter — removes dopamine, not glutamate', mol:null, ok:false},
+    ], xp:20, pts:100},
+
+  { sc:'injury', gameLevel:1,
+    title:'Axon down — first response',
+    narr:'Madhu\'s axon is severed. Nellie rushes to the site. The distal segment is dying.',
+    speaker:'micro', listener:'neuron',
+    q:'What is the programmed axon degeneration process distal to an injury site called?',
+    hint:'Named after the scientist who described it in 1850. Think of a wall collapsing — it degenerates in the direction away from the cell body (anterograde).',
+    choices:[
+      {t:'Wallerian degeneration — anterograde axon death after physical injury', mol:null, ok:true},
+      {t:'Apoptosis — programmed cell death affecting the whole neuron', mol:null, ok:false},
+      {t:'Necrosis — uncontrolled cell death from acute damage', mol:null, ok:false},
+      {t:'Autophagy — self-digestion pathway, different trigger entirely', mol:null, ok:false},
+    ], xp:25, pts:110},
+
+  { sc:'oxygen', gameLevel:1,
+    title:'Luis holds the myelin',
+    narr:'Luis is trying to maintain myelin during the hypoxia crisis. Speed is everything.',
+    speaker:'oligo', listener:'neuron',
+    q:'How does myelin increase nerve conduction velocity?',
+    hint:'Myelin creates gaps called nodes where electrical signals jump — this jumping conduction has a specific name. Think of it as saltatory (from Latin for "to jump").',
+    choices:[
+      {t:'Saltatory conduction — signal jumps between nodes of Ranvier, boosting speed 100x', mol:null, ok:true},
+      {t:'Continuous conduction — signal flows smoothly along the whole axon', mol:null, ok:false},
+      {t:'Chemical conduction — neurotransmitter diffusion, only at synapses', mol:null, ok:false},
+      {t:'Retrograde conduction — signals going backward toward the cell body', mol:null, ok:false},
+    ], xp:20, pts:100},
+
+  // ══ GAME LEVEL 2: SYNAPTIC STORM ═════════════════════════════
+  { sc:'learning', gameLevel:2,
+    title:'Lock in the memory',
+    narr:'Madhu just fired a theta burst. LTP is engaging. The synapse must be permanently strengthened.',
+    speaker:'neuron', listener:'astro',
+    q:'Which kinase autophosphorylates to lock in long-term potentiation permanently?',
+    hint:'This kinase is activated by calcium/calmodulin. Its name has three parts: Ca2+/calmodulin-dependent protein kinase. The Roman numeral II is key.',
+    choices:[
+      {t:'CaMKII — Ca2+/calmodulin-dependent kinase II, locks in LTP permanently', mol:'CaMKII', ok:true},
+      {t:'PKA — cAMP-dependent protein kinase, different plasticity pathway', mol:null, ok:false},
+      {t:'GSK-3 — glycogen synthase kinase, linked to tau phosphorylation in disease', mol:null, ok:false},
+      {t:'ERK — MAP kinase family, involved in growth factor signaling', mol:null, ok:false},
+    ], xp:30, pts:150},
+
+  { sc:'learning', gameLevel:2,
+    title:'The memory gene',
+    narr:'CaMKII is active. But Madhu needs to express the critical immediate early gene for LTM.',
+    speaker:'neuron', listener:'astro',
+    q:'Which immediate early gene is absolutely required for long-term memory consolidation?',
+    hint:'This gene is Activity-Regulated. It encodes a protein associated with the Cytoskeleton. Its three-letter abbreviation describes what it regulates: Arc.',
+    choices:[
+      {t:'Arc — Activity-Regulated Cytoskeleton gene, required for long-term memory', mol:'Arc', ok:true},
+      {t:'BDNF — neurotrophin for survival and synaptic growth, not the IEG required', mol:'BDNF', ok:false},
+      {t:'Fos — transcription factor marker of activity, not itself required for LTM', mol:null, ok:false},
+      {t:'AMPA — glutamate receptor subunit, not an immediately-expressed gene', mol:'AMPA', ok:false},
+    ], xp:30, pts:150},
+
+  { sc:'baf53b', gameLevel:2,
+    title:'Chromatin crisis',
+    narr:'Madhu cannot access her own genes. Swarup suspects the chromatin remodeling complex is broken.',
+    speaker:'neuron', listener:'astro',
+    q:'BAF53b (Actl6b) is a neuron-specific subunit of which chromatin remodeling complex?',
+    hint:'SWI/SNF is the yeast name. In mammals it is called BAF — Brahma-Associated Factors. This complex repositions nucleosomes to allow or block gene access.',
+    choices:[
+      {t:'BAF/SWI-SNF complex — repositions nucleosomes to allow gene transcription', mol:'BAF53b', ok:true},
+      {t:'PRC2 — Polycomb repressive complex that silences developmental genes', mol:null, ok:false},
+      {t:'NuRD — nucleosome remodeling AND deacetylase, repressive function', mol:null, ok:false},
+      {t:'FACT — facilitates chromatin transcription without full remodeling', mol:null, ok:false},
+    ], xp:35, pts:175},
+
+  { sc:'learning', gameLevel:2,
+    title:'Negin recycles at the synapse',
+    narr:'After every burst of LTP, Negin must carefully manage neurotransmitter levels.',
+    speaker:'astro', listener:'neuron',
+    q:'What is the neurotransmitter cycle between neurons and astrocytes called?',
+    hint:'Glutamate is taken up by astrocytes, converted to glutamine (a safe storage form), and shuttled back to neurons. The cycle is named after the two molecules.',
+    choices:[
+      {t:'Glutamate-glutamine cycle — astrocytes recycle neurotransmitter back to neurons', mol:null, ok:true},
+      {t:'Krebs cycle — mitochondrial energy metabolism, not neurotransmitter recycling', mol:null, ok:false},
+      {t:'Cori cycle — liver-muscle lactate recycling, not brain-specific', mol:null, ok:false},
+      {t:'Urea cycle — ammonia detoxification, not related to synaptic transmission', mol:null, ok:false},
+    ], xp:30, pts:150},
+
+  { sc:'baf53b', gameLevel:2,
+    title:'Arc expression fails',
+    narr:'Without BAF53b, Madhu\'s activity-dependent transcription is completely silent.',
+    speaker:'neuron', listener:'astro',
+    q:'What does "IEG" stand for in the context of activity-dependent gene expression?',
+    hint:'These genes are expressed within minutes of neural activity — no new protein synthesis needed for their transcription. They are Immediate Early Genes.',
+    choices:[
+      {t:'Immediate Early Gene — expressed within minutes of neural activity, protein-synthesis independent', mol:null, ok:true},
+      {t:'Induced Epigenetic Gene — regulated by chromatin modifications only', mol:null, ok:false},
+      {t:'Interneuron Excitation Gene — expressed only in inhibitory neurons', mol:null, ok:false},
+      {t:'Isomer Encoding Gene — produces structurally different protein variants', mol:null, ok:false},
+    ], xp:30, pts:150},
+
+  // ══ GAME LEVEL 3: CRISIS MODE ════════════════════════════════
+  { sc:'injury', gameLevel:3,
+    title:'The scar decision',
+    narr:'Negin must decide whether to form a glial scar. It\'s not a simple choice.',
+    speaker:'astro', listener:'neuron',
+    q:'What does a glial scar do — help regeneration, hurt it, or both?',
+    hint:'CSPGs — Chondroitin Sulfate Proteoglycans — are secreted by reactive astrocytes. They contain damage but also create a molecular barrier that inhibits axon regrowth.',
+    choices:[
+      {t:'BOTH — contains damage but deposits CSPGs that block axon regrowth', mol:null, ok:true},
+      {t:'Helps only — it guides the growth cone directly to its target', mol:null, ok:false},
+      {t:'Hurts only — glial scars always and completely prevent regeneration', mol:null, ok:false},
+      {t:'Neither — glial scars are purely structural scaffolding', mol:null, ok:false},
+    ], xp:40, pts:200},
+
+  { sc:'inflammation', gameLevel:3,
+    title:'Nellie goes amoeboid',
+    narr:'Nellie detects a Stage 3 inflammatory event. She\'s changing her entire shape and function.',
+    speaker:'micro', listener:'immune',
+    q:'When microglia transition from surveillance to active immune response, their shape changes to:',
+    hint:'At rest, microglia have many long branches (ramified). When activated, they retract these processes and become rounded — a shape that resembles a type of organism.',
+    choices:[
+      {t:'Amoeboid — retracted processes, rounded cell body, maximum phagocytic activity', mol:null, ok:true},
+      {t:'Ramified — highly branched resting state with extended surveillance processes', mol:null, ok:false},
+      {t:'Bipolar — two-process elongated shape seen only in development', mol:null, ok:false},
+      {t:'Stellate — star-shaped like astrocytes, incorrect cell type comparison', mol:null, ok:false},
+    ], xp:35, pts:175},
+
+  { sc:'oxygen', gameLevel:3,
+    title:'VEGF to the rescue',
+    narr:'Ze must grow new blood vessels after the hypoxia crisis. Negin sent the signal.',
+    speaker:'astro', listener:'endo',
+    q:'Which growth factor do astrocytes secrete to stimulate new blood vessel formation (angiogenesis)?',
+    hint:'This is the Vascular Endothelial Growth Factor. It is the primary signal for sprouting new capillaries. Its abbreviation is four letters starting with V.',
+    choices:[
+      {t:'VEGF — Vascular Endothelial Growth Factor, primary angiogenesis signal', mol:null, ok:true},
+      {t:'BDNF — Brain-Derived Neurotrophic Factor, promotes neuron survival not vessels', mol:'BDNF', ok:false},
+      {t:'NGF — Nerve Growth Factor, guides axon growth not blood vessels', mol:null, ok:false},
+      {t:'EGF — Epidermal Growth Factor, epithelial proliferation not angiogenesis', mol:null, ok:false},
+    ], xp:40, pts:200},
+
+  { sc:'injury', gameLevel:3,
+    title:'Luis remyelinates',
+    narr:'The axon is regrowing. Luis must remyelinate it. New oligodendrocytes are arriving.',
+    speaker:'oligo', listener:'neuron',
+    q:'What are the precursor cells that generate new oligodendrocytes after injury?',
+    hint:'They are the most proliferative cells in the adult brain. Their abbreviation is OPC — Oligodendrocyte Precursor Cells. They are also called NG2 cells.',
+    choices:[
+      {t:'OPCs (NG2 cells) — the most proliferative adult brain cells, generate new oligodendrocytes', mol:null, ok:true},
+      {t:'Neural stem cells — generate all brain cell types but primarily in specific niches', mol:null, ok:false},
+      {t:'Schwann cells — myelinate peripheral nervous system, not the brain', mol:null, ok:false},
+      {t:'Radial glia — developmental cells that guide neuron migration in embryos', mol:null, ok:false},
+    ], xp:40, pts:200},
+
+  // ══ GAME LEVEL 4: DISEASE WARD ═══════════════════════════════
+  { sc:'alzheimers', gameLevel:4,
+    title:'The sticky plaques',
+    narr:'Nellie is overwhelmed by amyloid deposits. Which genetic variant impairs clearance?',
+    speaker:'micro', listener:'astro',
+    q:'Which ApoE variant is the strongest genetic risk factor for late-onset Alzheimer\'s disease?',
+    hint:'ApoE has three variants: ApoE2 (protective), ApoE3 (neutral, most common), and the risk variant. The number follows the Greek letter epsilon. It\'s the 4th variant.',
+    choices:[
+      {t:'ApoE4 — impairs amyloid beta clearance and promotes aggregation', mol:'ApoE4', ok:true},
+      {t:'ApoE2 — actually protective against Alzheimer\'s disease', mol:null, ok:false},
+      {t:'ApoE3 — neutral variant, most common in the population (~78%)', mol:null, ok:false},
+      {t:'ApoB — LDL transporter found in liver, unrelated to Alzheimer\'s', mol:null, ok:false},
+    ], xp:40, pts:200},
+
+  { sc:'parkinsons', gameLevel:4,
+    title:'The protein culprit',
+    narr:'Veronica\'s dopaminergic neurons are dying. Protein aggregates are everywhere.',
+    speaker:'dopa', listener:'neuron',
+    q:'What misfolded protein forms Lewy bodies — the pathological hallmark of Parkinson\'s?',
+    hint:'This protein is normally found at synaptic vesicles. Its Greek letter prefix means "lacking" normal structure. Think: alpha + synuclein (synapse protein).',
+    choices:[
+      {t:'Alpha-synuclein — synaptic vesicle protein that misfolds and aggregates into Lewy bodies', mol:null, ok:true},
+      {t:'Tau — microtubule-associated protein, forms tangles in Alzheimer\'s not Parkinson\'s', mol:'tau', ok:false},
+      {t:'TDP-43 — RNA-binding protein linked to ALS and frontotemporal dementia', mol:null, ok:false},
+      {t:'Huntingtin — polyglutamine expansion protein causing Huntington\'s disease', mol:null, ok:false},
+    ], xp:45, pts:225},
+
+  { sc:'schizophrenia', gameLevel:4,
+    title:'Silent receptors',
+    narr:'Madhu\'s NMDA receptors are hypoactive. The E/I ratio is dangerously imbalanced.',
+    speaker:'neuron', listener:'astro',
+    q:'Why are NMDA receptors called "coincidence detectors" — what two things must coincide?',
+    hint:'Unlike AMPA receptors that open with just glutamate, NMDA receptors also have a magnesium block. The Mg2+ is only expelled when the postsynaptic membrane is already depolarized.',
+    choices:[
+      {t:'Glutamate binding AND postsynaptic depolarization must happen simultaneously', mol:'NMDA', ok:true},
+      {t:'Only glutamate binding is needed — same as AMPA receptors', mol:'AMPA', ok:false},
+      {t:'Only voltage change is required — like voltage-gated ion channels', mol:null, ok:false},
+      {t:'Dopamine plus serotonin must both be present at the synapse', mol:null, ok:false},
+    ], xp:45, pts:225},
+
+  { sc:'alzheimers', gameLevel:4,
+    title:'Tau goes rogue',
+    narr:'Inside Madhu\'s neurons, tau is hyperphosphorylated. The cytoskeleton is collapsing.',
+    speaker:'neuron', listener:'astro',
+    q:'In Alzheimer\'s disease, hyperphosphorylated tau causes problems by:',
+    hint:'Tau normally stabilizes microtubules — the cell\'s internal highway for transporting cargo. When hyperphosphorylated, tau detaches and clumps together. Think about what the highway does.',
+    choices:[
+      {t:'Detaching from microtubules and forming neurofibrillary tangles, blocking axonal transport', mol:'tau', ok:true},
+      {t:'Overactivating NMDA receptors leading to excitotoxic calcium influx', mol:'NMDA', ok:false},
+      {t:'Blocking AMPA receptor insertion at postsynaptic density', mol:'AMPA', ok:false},
+      {t:'Inhibiting mitochondrial ATP production in dendrites', mol:null, ok:false},
+    ], xp:45, pts:225},
+
+  // ══ GAME LEVEL 5: SWARUP'S LAB ═══════════════════════════════
+  { sc:'autism', gameLevel:5,
+    title:'Too many connections',
+    narr:'Madhu has too many synapses. Nellie\'s pruning is insufficient. What\'s the molecular failure?',
+    speaker:'micro', listener:'astro',
+    q:'Which translational repressor fails in Fragile X syndrome, causing too many synaptic proteins?',
+    hint:'This protein is lost in Fragile X Mental Retardation syndrome. Its abbreviation is FMRP. It normally brakes translation of synaptic proteins at the synapse.',
+    choices:[
+      {t:'FMRP — Fragile X Mental Retardation Protein, represses synaptic mRNA translation', mol:'FMRP', ok:true},
+      {t:'BDNF — promotes synapse formation, opposite of a translational brake', mol:'BDNF', ok:false},
+      {t:'Arc — IEG for memory, promotes synaptic plasticity not repression', mol:'Arc', ok:false},
+      {t:'NF-kB — inflammatory switch, not a translational repressor at synapses', mol:'NF-kB', ok:false},
+    ], xp:50, pts:250},
+
+  { sc:'autism', gameLevel:5,
+    title:'The scaffold collapses',
+    narr:'Madhu\'s postsynaptic density is unstable. A scaffold protein is mutated.',
+    speaker:'neuron', listener:'astro',
+    q:'Mutations in which postsynaptic scaffold protein cause Phelan-McDermid syndrome?',
+    hint:'This protein is in the SHANK family. It\'s found at the postsynaptic density of excitatory synapses and links glutamate receptors to the actin cytoskeleton. SHANK followed by the number 3.',
+    choices:[
+      {t:'SHANK3 — links glutamate receptors to the cytoskeleton at the postsynaptic density', mol:'SHANK3', ok:true},
+      {t:'PSD-95 — another scaffold protein but mutations cause a different syndrome', mol:null, ok:false},
+      {t:'Homer — mGluR anchoring protein, different signaling pathway', mol:null, ok:false},
+      {t:'Gephyrin — scaffold at INHIBITORY synapses, wrong synapse type', mol:null, ok:false},
+    ], xp:50, pts:250},
+
+  { sc:'schizophrenia', gameLevel:5,
+    title:'Nora holds the brake',
+    narr:'Nora\'s GABAergic interneurons are failing. Excitation is spiraling out of control.',
+    speaker:'inter', listener:'neuron',
+    q:'Parvalbumin-positive interneurons are especially important in schizophrenia because they:',
+    hint:'Parvalbumin interneurons fire at very high frequencies and synchronize cortical gamma oscillations. When they fail, cognitive binding collapses. Think fast-spiking and gamma rhythm.',
+    choices:[
+      {t:'Synchronize gamma oscillations critical for cognitive binding and working memory', mol:'GABA', ok:true},
+      {t:'Regulate dopamine release in the mesolimbic pathway', mol:null, ok:false},
+      {t:'Control serotonin synthesis in the raphe nuclei', mol:null, ok:false},
+      {t:'Maintain blood-brain barrier integrity with endothelial cells', mol:null, ok:false},
+    ], xp:55, pts:275},
+
+  { sc:'parkinsons', gameLevel:5,
+    title:'Veronica loses her pathway',
+    narr:'Veronica\'s nigrostriatal pathway is degenerating. Motor control is failing.',
+    speaker:'dopa', listener:'neuron',
+    q:'Which gene is the most common genetic cause of familial Parkinson\'s disease?',
+    hint:'This kinase gene was discovered in families from Basque Country and North Africa with high Parkinson\'s rates. Its abbreviation is LRRK2 — four letters and a number.',
+    choices:[
+      {t:'LRRK2 — Leucine-rich Repeat Kinase 2, most common genetic Parkinson\'s mutation', mol:'LRRK2', ok:true},
+      {t:'PARK1/SNCA — alpha-synuclein gene, causes rare early-onset form', mol:null, ok:false},
+      {t:'GBA — glucocerebrosidase, a risk factor but not the most common cause', mol:null, ok:false},
+      {t:'PINK1 — mitochondrial kinase, causes recessive early-onset Parkinson\'s', mol:null, ok:false},
+    ], xp:55, pts:275},
+
+  { sc:'learning', gameLevel:5,
+    title:'Das times the release',
+    narr:'Das is measuring synaptic vesicle exocytosis with femtosecond precision.',
+    speaker:'syn', listener:'neuron',
+    q:'The SNARE complex mediates vesicle fusion. Which SNARE protein is on the vesicle membrane?',
+    hint:'There are two SNARE families: v-SNAREs (on vesicles) and t-SNAREs (on target membrane). The vesicle SNARE is named Synaptobrevin, also called VAMP — Vesicle-Associated Membrane Protein.',
+    choices:[
+      {t:'Synaptobrevin (VAMP) — the v-SNARE on synaptic vesicles that drives membrane fusion', mol:'SNARE', ok:true},
+      {t:'Syntaxin — a t-SNARE on the presynaptic target membrane, not the vesicle', mol:null, ok:false},
+      {t:'SNAP-25 — another t-SNARE on the presynaptic membrane, not the vesicle', mol:null, ok:false},
+      {t:'Synaptotagmin — the calcium sensor that triggers SNARE-mediated fusion', mol:null, ok:false},
+    ], xp:55, pts:275},
+
+  { sc:'injury', gameLevel:5,
+    title:'Johnny holds inhibition',
+    narr:'Johnny\'s GABAergic neurons are failing at the injury site. E/I balance is critical.',
+    speaker:'gaba', listener:'neuron',
+    q:'GABA is synthesized from glutamate by GAD. What does GAD stand for?',
+    hint:'GAD is the enzyme that removes a carboxyl group (COO-) from glutamate to make GABA. This type of reaction is called decarboxylation. GAD = Glutamic Acid Decarboxylase.',
+    choices:[
+      {t:'Glutamic Acid Decarboxylase — removes carboxyl group from glutamate to synthesize GABA', mol:'GABA', ok:true},
+      {t:'GABA Activating Domain — a receptor domain, not a synthesis enzyme', mol:null, ok:false},
+      {t:'Gamma Amino Deaminase — incorrect enzyme name entirely', mol:null, ok:false},
+      {t:'GABA-A Determinant — a pharmacological classification, not a gene', mol:null, ok:false},
+    ], xp:55, pts:275},
+
+  { sc:'baf53b', gameLevel:5,
+    title:'Swarup calls it',
+    narr:'Swarup reviews the CMAP screen. The Baf53b rescue compound reversed the transcriptomic signature.',
+    speaker:'pi', listener:'neuron',
+    q:'CMAP (Connectivity Map) identifies drug candidates by matching:',
+    hint:'CMAP was developed at the Broad Institute. It contains thousands of drug perturbation profiles — each drug\'s effect on the transcriptome. You find drugs that REVERSE a disease signature.',
+    choices:[
+      {t:'Transcriptomic signatures of disease to drug perturbation profiles that reverse them', mol:'CMAP', ok:true},
+      {t:'Protein 3D structures to drug binding pocket shapes for docking prediction', mol:null, ok:false},
+      {t:'CRISPR screen results to candidate target genes for validation', mol:null, ok:false},
+      {t:'Patient genome variants to known disease-causing polymorphisms', mol:null, ok:false},
+    ], xp:60, pts:300},
+];
+
+const DISORDERS = [
+  {
+    id: "alzheimers",
+    name: "Alzheimer's Disease",
+    icon: "🧩",
+    color: "#fbbf24",
+    type: "Neurodegenerative",
+    desc: "Progressive memory loss from amyloid plaques and tau tangles destroying hippocampal circuits.",
+    cells: ["Nellie (Microglia)", "Negin (Astrocyte)", "Madhu (Neuron)", "Ze (Endothelial)"],
+    molecules: ["ApoE4", "tau", "BDNF", "NF-kB"],
+    facts: [
+      "Affects 55M+ people worldwide",
+      "ApoE4 carriers have 3-15x higher risk",
+      "Amyloid accumulates 15-20 years before symptoms appear"
+    ]
+  },
+  {
+    id: "parkinsons",
+    name: "Parkinson's Disease",
+    icon: "🫨",
+    color: "#34d399",
+    type: "Neurodegenerative",
+    desc: "Motor control loss from dopaminergic neuron death in substantia nigra, causing tremor and rigidity.",
+    cells: ["Veronica (Dopamine)", "Nellie (Microglia)", "Luis (Oligo)", "Ze (Endothelial)"],
+    molecules: ["LRRK2", "SNARE", "GABA"],
+    facts: [
+      "60-80% of dopamine neurons lost before symptoms appear",
+      "Most common genetic cause: LRRK2 mutation",
+      "Lewy bodies are alpha-synuclein aggregates"
+    ]
+  },
+  {
+    id: "schizophrenia",
+    name: "Schizophrenia",
+    icon: "🌀",
+    color: "#c084fc",
+    type: "Psychiatric",
+    desc: "Disconnection from reality from dopamine hyperactivity and NMDA receptor hypofunction.",
+    cells: ["Nora (Interneuron)", "Madhu (Neuron)", "Nellie (Microglia)", "Das (Synaptic)"],
+    molecules: ["NMDA", "GABA", "AMPA"],
+    facts: [
+      "Affects approximately 1% of the global population",
+      "Parvalbumin interneuron loss disrupts gamma oscillations",
+      "NMDA antagonists recreate psychosis symptoms in healthy individuals"
+    ]
+  },
+  {
+    id: "autism",
+    name: "Autism Spectrum Disorder",
+    icon: "🌈",
+    color: "#f472b6",
+    type: "Neurodevelopmental",
+    desc: "Atypical social cognition and sensory processing from E/I imbalance and excess synaptic connections.",
+    cells: ["Madhu (Neuron)", "Nellie (Microglia)", "Nora (Interneuron)", "Negin (Astrocyte)"],
+    molecules: ["FMRP", "SHANK3", "BDNF", "GABA"],
+    facts: [
+      "Affects 1 in 36 children in the United States",
+      "Insufficient synaptic pruning leads to hyperconnectivity",
+      "Strong genetic basis with over 1000 risk genes identified"
+    ]
+  }
+];
+
+const LAB_SCENARIOS = [
+  { s: "inflammation", icon: "🔥", name: "Inflammation",  desc: "NF-kB, cytokines, resolution" },
+  { s: "oxygen",       icon: "💨", name: "Oxygen Crisis",  desc: "HIF-1a, hypoxia, vasodilation" },
+  { s: "learning",     icon: "🧠", name: "Memory and LTP", desc: "CaMKII, Arc, BDNF" },
+  { s: "injury",       icon: "⚡", name: "Axon Injury",    desc: "Wallerian, CSPG, regrowth" },
+  { s: "baf53b",       icon: "🔬", name: "Baf53b Mutant",  desc: "BAF complex, chromatin, IEG" }
+];
+
+
+// ── DISORDER FOCUS SYSTEM ─────────────────────────────────────
+// G.focusDisorder = null means all scenarios; set to disorder id for focused mode
+
+function showDisorderSelect() {
+  document.getElementById("level-select").style.display = "none";
+  document.getElementById("disorder-select").style.display = "flex";
+  renderDisorderSelectCards();
+}
+
+function renderDisorderSelectCards() {
+  var grid = document.getElementById("ds-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  // "All Scenarios" card first
+  var allCard = document.createElement("div");
+  allCard.className = "ds-card" + (G.focusDisorder === null ? " chosen-disorder" : "");
+  allCard.style.setProperty("--dc", "#389bff");
+  allCard.innerHTML =
+    '<div class="ds-icon">&#127488;</div>' +
+    '<div class="ds-name">All Scenarios</div>' +
+    '<div class="ds-type">Full Game</div>' +
+    '<div class="ds-count" style="background:rgba(56,155,255,.1);border:1px solid rgba(56,155,255,.3);color:#389bff">' +
+      G.currentMissions.length + " questions" +
+    "</div>" +
+    '<div style="font-size:9px;color:var(--tx3);margin-top:4px">9 scenarios mixed</div>';
+  allCard.onclick = function() {
+    G.focusDisorder = null;
+    updateDisorderSelectUI();
+  };
+  grid.appendChild(allCard);
+
+  // One card per disorder
+  DISORDERS.forEach(function(d) {
+    var count = G.currentMissions.filter(function(m) { return m.sc === d.id; }).length;
+    var card = document.createElement("div");
+    card.className = "ds-card" + (G.focusDisorder === d.id ? " chosen-disorder" : "");
+    card.style.setProperty("--dc", d.color);
+
+    var catLabel = d.type === "Neurodevelopmental" ? "NEURODEV" : d.type.slice(0, 9).toUpperCase();
+
+    card.innerHTML =
+      '<div class="ds-icon">' + d.icon + "</div>" +
+      '<div class="ds-name">' + d.name + "</div>" +
+      '<div class="ds-type">' + d.type + "</div>" +
+      '<div class="ds-count" style="background:' + d.color + '11;border:1px solid ' + d.color + '33;color:' + d.color + '">' +
+        count + " questions" +
+      "</div>" +
+      '<div class="ds-mols">' +
+        d.molecules.map(function(mol) {
+          return '<span class="ds-mol">' + mol + "</span>";
+        }).join("") +
+      "</div>";
+
+    card.onclick = function() {
+      G.focusDisorder = d.id;
+      updateDisorderSelectUI();
+    };
+    grid.appendChild(card);
+  });
+}
+
+function updateDisorderSelectUI() {
+  // Refresh card highlights
+  var cards = document.querySelectorAll(".ds-card");
+  cards.forEach(function(card, i) {
+    if (i === 0) {
+      card.classList.toggle("chosen-disorder", G.focusDisorder === null);
+    } else {
+      var disorder = DISORDERS[i - 1];
+      card.classList.toggle("chosen-disorder", G.focusDisorder === disorder.id);
+    }
+  });
+  // Update start button
+  var btn = document.getElementById("ds-start-btn");
+  if (!btn) return;
+  if (G.focusDisorder === null) {
+    btn.textContent = "Play All Scenarios \u2192";
+  } else {
+    var d = DISORDERS.find(function(x) { return x.id === G.focusDisorder; });
+    btn.textContent = "Focus on " + (d ? d.name : "") + " \u2192";
+  }
+}
+
+function confirmDisorderAndStart() {
+  document.getElementById("disorder-select").style.display = "none";
+  // Filter missions based on focus
+  if (G.focusDisorder !== null) {
+    var filtered = G.currentMissions.filter(function(m) {
+      return m.sc === G.focusDisorder;
+    });
+    if (filtered.length === 0) {
+      // fallback to all if no missions for this disorder in current level
+      G.focusDisorder = null;
+    } else {
+      G.currentMissions = filtered;
+    }
+  }
+  G.midx = 0;
+  var lv = GAME_LEVELS.find(function(l) { return l.id === G.chosenGameLevel; });
+  showLevelBanner(lv);
+}
+
+// ── RENDER RIGHT PANEL DISORDER CARDS (in-game) ───────────────
+function renderDisorderList() {
+  var list = document.getElementById("disorder-list");
+  if (!list) return;
+  list.innerHTML = "";
+
+  // Focus banner
+  var banner = document.createElement("div");
+  banner.className = "focus-banner" + (G.focusDisorder ? " show" : "");
+  banner.id = "focus-banner";
+  var d = G.focusDisorder ? DISORDERS.find(function(x) { return x.id === G.focusDisorder; }) : null;
+  if (d) {
+    banner.innerHTML =
+      '<span class="focus-banner-icon">' + d.icon + "</span>" +
+      '<span>Focus: <strong>' + d.name + "</strong></span>" +
+      '<button class="focus-banner-clear" onclick="clearFocus()">Clear</button>';
+  }
+  list.appendChild(banner);
+
+  // Hint text
+  var note = document.createElement("div");
+  note.style.cssText = "font-size:10px;color:var(--tx3);padding:6px 0 8px;line-height:1.5;";
+  note.textContent = "Click a disorder card to focus all remaining questions on it. Molecules are clickable.";
+  list.appendChild(note);
+
+  DISORDERS.forEach(function(d) {
+    var missionsForThis = G.currentMissions.filter(function(m) { return m.sc === d.id; });
+    var isActive = G.focusDisorder === d.id;
+
+    var card = document.createElement("div");
+    card.className = "rp-disorder-card" + (isActive ? " active-dc" : "");
+    card.id = "dc-" + d.id;
+    card.style.setProperty("--dc", d.color);
+
+    // Header
+    var header = document.createElement("div");
+    header.className = "rp-dc-header";
+    var catLabel = d.type === "Neurodevelopmental" ? "NEURODEV" : d.type.slice(0, 8).toUpperCase();
+    header.innerHTML =
+      '<span class="rp-dc-icon">' + d.icon + "</span>" +
+      '<span class="rp-dc-name">' + d.name + "</span>" +
+      '<span class="rp-dc-badge" style="background:' + d.color + '11;border:1px solid ' + d.color + '33;color:' + d.color + '">' + catLabel + "</span>";
+    card.appendChild(header);
+
+    // Description
+    var desc = document.createElement("div");
+    desc.className = "rp-dc-desc";
+    desc.textContent = d.desc;
+    card.appendChild(desc);
+
+    // Affected cells
+    var cellsDiv = document.createElement("div");
+    cellsDiv.className = "rp-dc-cells";
+    d.cells.forEach(function(cell) {
+      var span = document.createElement("span");
+      span.className = "rp-dc-cell";
+      span.textContent = cell;
+      cellsDiv.appendChild(span);
+    });
+    card.appendChild(cellsDiv);
+
+    // Molecules (clickable for definitions)
+    var molsDiv = document.createElement("div");
+    molsDiv.className = "rp-dc-mols";
+    d.molecules.forEach(function(mol) {
+      var span = document.createElement("span");
+      span.className = "rp-dc-mol";
+      span.style.setProperty("--dc", d.color);
+      span.textContent = mol;
+      span.onclick = function(e) {
+        e.stopPropagation();
+        showMolDef(mol);
+      };
+      molsDiv.appendChild(span);
+    });
+    card.appendChild(molsDiv);
+
+    // Facts (collapsed by default, show on hover via title)
+    var factsDiv = document.createElement("div");
+    factsDiv.className = "rp-dc-facts";
+    factsDiv.innerHTML = d.facts.map(function(f) { return "\u25b6 " + f; }).join("<br>");
+    card.appendChild(factsDiv);
+
+    // Footer: mission count + jump link
+    var footer = document.createElement("div");
+    footer.className = "rp-dc-footer";
+    var countSpan = document.createElement("span");
+    countSpan.className = "rp-dc-count";
+    countSpan.textContent = missionsForThis.length + " questions in level";
+    footer.appendChild(countSpan);
+
+    if (missionsForThis.length > 0) {
+      var jumpBtn = document.createElement("button");
+      jumpBtn.className = "rp-dc-jump";
+      jumpBtn.textContent = "Jump \u2192";
+      jumpBtn.onclick = function(e) {
+        e.stopPropagation();
+        jumpToScen(d.id);
+      };
+      footer.appendChild(jumpBtn);
+    }
+    card.appendChild(footer);
+
+    // Click card = set focus
+    card.onclick = function() {
+      setDisorderFocus(d.id);
+    };
+
+    list.appendChild(card);
+  });
+}
+
+function setDisorderFocus(disorderId) {
+  // Toggle focus
+  if (G.focusDisorder === disorderId) {
+    clearFocus();
+    return;
+  }
+  G.focusDisorder = disorderId;
+  var d = DISORDERS.find(function(x) { return x.id === disorderId; });
+
+  // Update cards
+  document.querySelectorAll(".rp-disorder-card").forEach(function(c) {
+    c.classList.toggle("active-dc", c.id === "dc-" + disorderId);
+  });
+
+  // Update focus banner
+  var banner = document.getElementById("focus-banner");
+  if (banner && d) {
+    banner.innerHTML =
+      '<span class="focus-banner-icon">' + d.icon + "</span>" +
+      '<span>Focus: <strong>' + d.name + "</strong></span>" +
+      '<button class="focus-banner-clear" onclick="clearFocus()">Clear</button>';
+    banner.classList.add("show");
+  }
+
+  // Show popup confirmation
+  showScorePop(d.icon + " " + d.name, null, d.color);
+
+  // Jump to first mission of this disorder
+  var idx = G.currentMissions.findIndex(function(m) { return m.sc === disorderId; });
+  if (idx >= 0) {
+    G.midx = idx;
+    nextMission();
+  }
+}
+
+function clearFocus() {
+  G.focusDisorder = null;
+  document.querySelectorAll(".rp-disorder-card").forEach(function(c) {
+    c.classList.remove("active-dc");
+  });
+  var banner = document.getElementById("focus-banner");
+  if (banner) banner.classList.remove("show");
+}
+
+// ── MOL DEFINITION POPUP ──────────────────────────────────────
+function showMolDef(mol) {
+  var def = MOLECULES[mol];
+  if (!def) return;
+  var tt = document.getElementById("mol-tip");
+  tt.innerHTML = "<strong>" + mol + "</strong>" + def;
+  tt.style.display = "block";
+  tt.style.left = "50%";
+  tt.style.top = "50%";
+  tt.style.transform = "translate(-50%,-50%)";
+  tt.style.maxWidth = "280px";
+  tt.style.zIndex = "700";
+  setTimeout(function() {
+    tt.style.display = "none";
+    tt.style.transform = "";
+  }, 4000);
+}
+
+// ── LAB SCENARIOS RENDERER ────────────────────────────────────
+function renderScenList() {
+  var list = document.getElementById("scenlist");
+  if (!list) return;
+  list.innerHTML = "";
+
+  var note = document.createElement("div");
+  note.style.cssText = "font-size:10px;color:var(--tx3);margin-bottom:7px;line-height:1.5;";
+  note.textContent = "Jump to any lab scenario in the current level.";
+  list.appendChild(note);
+
+  LAB_SCENARIOS.forEach(function(cfg) {
+    var count = G.currentMissions.filter(function(m) { return m.sc === cfg.s; }).length;
+    var btn = document.createElement("button");
+    btn.className = "lab-scen-btn";
+    btn.dataset.s = cfg.s;
+    btn.style.setProperty("--bc", "#389bff");
+
+    var iconSpan = document.createElement("span");
+    iconSpan.style.fontSize = "13px";
+    iconSpan.textContent = cfg.icon;
+    btn.appendChild(iconSpan);
+
+    var infoDiv = document.createElement("div");
+    infoDiv.style.cssText = "flex:1;text-align:left";
+    infoDiv.innerHTML =
+      '<div style="font-size:11px;font-weight:500">' + cfg.name + "</div>" +
+      '<div style="font-size:9px;color:var(--tx3);font-family:var(--mono)">' + cfg.desc + "</div>";
+    btn.appendChild(infoDiv);
+
+    var rightDiv = document.createElement("div");
+    var catSpan = document.createElement("span");
+    catSpan.className = "lsb-cat cl";
+    catSpan.textContent = "LAB";
+    rightDiv.appendChild(catSpan);
+    var cntDiv = document.createElement("div");
+    cntDiv.className = "lsb-count";
+    cntDiv.style.opacity = count > 0 ? "1" : "0.4";
+    cntDiv.textContent = count > 0 ? count + " Q" : "-";
+    rightDiv.appendChild(cntDiv);
+    btn.appendChild(rightDiv);
+
+    btn.onclick = function() { jumpToScen(cfg.s); };
+    list.appendChild(btn);
+  });
+
+  var dhdr = document.createElement("div");
+  dhdr.style.cssText = "font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);margin:10px 0 5px;padding-top:8px;border-top:1px solid var(--b1);";
+  dhdr.textContent = "Disease scenarios";
+  list.appendChild(dhdr);
+
+  var diseaseScens = [
+    { s: "alzheimers",    icon: "🧩", color: "#fbbf24", name: "Alzheimer's" },
+    { s: "parkinsons",    icon: "🫨", color: "#34d399", name: "Parkinson's" },
+    { s: "schizophrenia", icon: "🌀", color: "#c084fc", name: "Schizophrenia" },
+    { s: "autism",        icon: "🌈", color: "#f472b6", name: "Autism" }
+  ];
+
+  diseaseScens.forEach(function(cfg) {
+    var count = G.currentMissions.filter(function(m) { return m.sc === cfg.s; }).length;
+    var btn = document.createElement("button");
+    btn.className = "lab-scen-btn";
+    btn.dataset.s = cfg.s;
+    btn.style.setProperty("--bc", cfg.color);
+
+    var iconSpan = document.createElement("span");
+    iconSpan.style.fontSize = "13px";
+    iconSpan.textContent = cfg.icon;
+    btn.appendChild(iconSpan);
+
+    var nameSpan = document.createElement("span");
+    nameSpan.style.cssText = "flex:1;font-size:11px;font-weight:500";
+    nameSpan.textContent = cfg.name;
+    btn.appendChild(nameSpan);
+
+    var catSpan = document.createElement("span");
+    catSpan.className = "lsb-cat cd";
+    catSpan.textContent = "DISEASE";
+    btn.appendChild(catSpan);
+
+    var cntDiv = document.createElement("div");
+    cntDiv.className = "lsb-count";
+    cntDiv.style.opacity = count > 0 ? "1" : "0.4";
+    cntDiv.textContent = count > 0 ? count + " Q" : "-";
+    btn.appendChild(cntDiv);
+
+    btn.onclick = function() { jumpToScen(cfg.s); };
+    list.appendChild(btn);
+  });
+}
+
+
+
+
+
+
+
+
+
+
+
+// ── ACHIEVEMENTS ─────────────────────────────────────────────
+const ACHIEVEMENTS = [
+  {id:'first',    e:'⚡', name:'First Spark',     desc:'Answer first question',       fn:G=>G.correct>=1},
+  {id:'str3',     e:'🔥', name:'On Fire',          desc:'3 correct in a row',          fn:G=>G.bstreak>=3},
+  {id:'str5',     e:'🌟', name:'Unstoppable',      desc:'5 correct in a row',          fn:G=>G.bstreak>=5},
+  {id:'fast',     e:'⚡', name:'Speed Neuron',      desc:'Answer in under 3 seconds',   fn:G=>G.fastAnswer},
+  {id:'score500', e:'🏆', name:'High Scorer',      desc:'Reach 500 points',            fn:G=>G.score>=500},
+  {id:'baf',      e:'🔬', name:'Baf53b Expert',    desc:'Complete Baf53b scenario',    fn:G=>G.scDone.has('baf53b')},
+  {id:'swarup',   e:'👨‍🔬', name:'PI Approved',      desc:'Answer Swarup\'s mission',    fn:G=>G.piMission},
+  {id:'allsc',    e:'🧠', name:'Full Brain',        desc:'Play all 9 scenarios',        fn:G=>G.scPlayed.size>=9},
+  {id:'nohint',   e:'💪', name:'No Lifelines',      desc:'Complete a level with 0 hints',fn:G=>G.levelNoHint},
+  {id:'alllevels',e:'🎮', name:'Master Researcher', desc:'Complete all 5 game levels',  fn:G=>G.levelsCompleted.size>=5},
+  {id:'score2k',  e:'💎', name:'Diamond Lab',       desc:'Reach 2000 points',           fn:G=>G.score>=2000},
+  {id:'str10',    e:'🌈', name:'Legendary',         desc:'10 correct in a row',         fn:G=>G.bstreak>=10},
+];
+
+// ── GAME STATE ────────────────────────────────────────────────
+let G = {
+  pid: null,
+  chosenGameLevel: 1,
+  score: 0, streak: 0, bstreak: 0,
+  correct: 0, wrong: 0, msgs: 0,
+  level: 1, xp: 0, xpnext: 100,
+  midx: 0, paused: false,
+  timer: 45*60, timerOn: false,
+  fastAnswer: false, answerTime: 0,
+  hintsLeft: 3, hintsUsed: 0,
+  hintShowing: false,
+  scPlayed: new Set(), scDone: new Set(),
+  unlocked: new Set(), piMission: false,
+  levelNoHint: false, levelHintUsed: false,
+  levelsCompleted: new Set(),
+  pos: {}, vel: {},
+  currentMissions: [],
+};
+let tutStep = 0;
+let titleIdx = 0;
+
+// ── NEBULA ────────────────────────────────────────────────────
+function initNebula() {
+  const c = document.getElementById('nebula');
+  c.width = innerWidth; c.height = innerHeight;
+  const ctx = c.getContext('2d');
+  const pts = Array.from({length:70}, () => ({
+    x:Math.random()*c.width, y:Math.random()*c.height,
+    r:Math.random()*1.5+.3, vx:(Math.random()-.5)*.14, vy:(Math.random()-.5)*.14,
+    col:CELLS[Math.floor(Math.random()*CELLS.length)].color,
+    a:Math.random()*.45+.15,
+  }));
+  const blobs = [[.25,.35,'#a78bfa',.055],[.7,.6,'#38bdf8',.045],[.5,.18,'#34d399',.038],
+    [.12,.72,'#f87171',.05],[.82,.3,'#fbbf24',.038],[.55,.8,'#c084fc',.03]];
+  function hexToRgb(h) {
+    h = h.replace('#','');
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  }
+  function frame() {
+    ctx.clearRect(0,0,c.width,c.height);
+    blobs.forEach(([fx,fy,col,a]) => {
+      const [r,g,b] = hexToRgb(col);
+      const grd = ctx.createRadialGradient(c.width*fx,c.height*fy,0,c.width*fx,c.height*fy,c.width*.2);
+      grd.addColorStop(0,'rgba('+r+','+g+','+b+','+a+')');
+      grd.addColorStop(1,'transparent');
+      ctx.fillStyle = grd; ctx.fillRect(0,0,c.width,c.height);
+    });
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x<0||p.x>c.width) p.vx *= -1;
+      if (p.y<0||p.y>c.height) p.vy *= -1;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fillStyle = p.col; ctx.globalAlpha = p.a; ctx.fill(); ctx.globalAlpha = 1;
+    });
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+// ── TUTORIAL ─────────────────────────────────────────────────
+function renderTutorial() {
+  const s = SLIDES[tutStep];
+  const isLast = tutStep === SLIDES.length - 1;
+  document.getElementById('tdots').innerHTML = SLIDES.map((_,i) =>
+    '<div class="tdot'+(i===tutStep?' active':i<tutStep?' done':'')+'" onclick="jumpTut('+i+')"></div>'
+  ).join('');
+  document.getElementById('tslide').innerHTML =
+    '<div class="tslide">' +
+    '<div class="tnum">'+s.step+'</div>' +
+    '<div class="ttitle">'+s.title+'</div>' +
+    '<div class="tbody">'+s.body.replace(/\n/g,'<br>')+'</div>' +
+    (s.demo||'') +
+    '<div class="tnav">' +
+    (tutStep>0 ? '<button class="tback" onclick="tutNav(-1)">&#8592; Back</button>' : '') +
+    '<button class="tskip" onclick="showTitle()">Skip tutorial</button>' +
+    '<button class="tnext" onclick="'+(isLast?'showTitle()':'tutNav(1)')+'">'+
+    (isLast ? 'Start game &#8594;' : 'Next &#8594;')+'</button>' +
+    '</div></div>';
+}
+function tutNav(d) { tutStep = Math.max(0, Math.min(SLIDES.length-1, tutStep+d)); renderTutorial(); }
+function jumpTut(i) { tutStep = i; renderTutorial(); }
+function showTitle() {
+  document.getElementById('tut').style.display = 'none';
+  document.getElementById('title').style.display = 'flex';
+}
+
+// ── TITLE SCREEN ─────────────────────────────────────────────
+function renderTitleCards() {
+  const wrap = document.getElementById('cell-grid');
+  CELLS.forEach(cell => {
+    const d = document.createElement('div');
+    d.className = 'csel'; d.dataset.id = cell.id;
+    d.style.setProperty('--cc', cell.color);
+    d.innerHTML =
+      '<div class="csel-emoji">'+cell.emoji+'</div>' +
+      '<div class="csel-name">'+cell.name+'</div>' +
+      '<div class="csel-role">'+cell.role+'</div>' +
+      '<div class="csel-type">'+cell.type+'</div>' +
+      (cell.id==='pi' ? '<div class="csel-pi">PI</div>' : '');
+    d.onclick = () => selectCell(cell.id);
+    wrap.appendChild(d);
+  });
+}
+
+function selectCell(id) {
+  document.querySelectorAll('.csel').forEach(c => c.classList.toggle('chosen', c.dataset.id===id));
+  G.pid = id;
+  const cell = CELLS.find(c => c.id===id);
+  const btn = document.getElementById('start-btn');
+  btn.disabled = false;
+  btn.textContent = 'Choose level \u2192 '+cell.name+' ready';
+}
+
+// ── LEVEL SELECT ──────────────────────────────────────────────
+function showLevelSelect() {
+  if (!G.pid) return;
+  document.getElementById('title').style.display = 'none';
+  document.getElementById('level-select').style.display = 'flex';
+  renderLevelCards();
+}
+
+function renderLevelCards() {
+  const wrap = document.getElementById('level-cards');
+  wrap.innerHTML = '';
+  GAME_LEVELS.forEach(lv => {
+    const missions = MISSIONS.filter(m => m.gameLevel === lv.id);
+    const done = G.levelsCompleted.has(lv.id);
+    const locked = false; // all levels unlocked from start for ZotCraft demo
+    const d = document.createElement('div');
+    d.className = 'lcard' + (locked ? ' locked' : '');
+    d.style.setProperty('--lc', lv.color);
+    d.innerHTML =
+      '<div class="lcard-icon">'+lv.icon+'</div>' +
+      '<div class="lcard-num">LEVEL '+lv.id+'</div>' +
+      '<div class="lcard-name">'+lv.name+'</div>' +
+      '<div class="lcard-theme">'+lv.theme+'</div>' +
+      '<div class="lcard-pts" style="color:'+lv.color+'">&times;'+lv.pointMult.toFixed(1)+' points</div>' +
+      '<div class="lcard-missions">'+missions.length+' missions</div>' +
+      (lv.hintCost>0 ? '<div class="lcard-missions" style="color:var(--amber)">hints: -'+lv.hintCost+'pts each</div>' : '<div class="lcard-missions" style="color:var(--ac2)">hints free!</div>') +
+      (done ? '<div class="lcard-done">&#9989;</div>' : '') +
+      (locked ? '<div class="lcard-lock">&#128274; Complete L'+(lv.id-1)+' first</div>' : '');
+    if (!locked) d.onclick = () => startLevel(lv.id);
+    wrap.appendChild(d);
+  });
+}
+
+function startLevel(lvId) {
+  G.chosenGameLevel = lvId;
+  const lv = GAME_LEVELS.find(l => l.id===lvId);
+  // Set hints based on level
+  G.hintsLeft = Math.max(3 - (lvId-1), 1);  // L1:3, L2:3, L3:2, L4:2, L5:1
+  G.levelHintUsed = false;
+  // Filter missions for this level
+  G.currentMissions = MISSIONS.filter(m => m.gameLevel === lvId);
+  G.midx = 0;
+  // Add time bonus
+  G.timer = 45*60 + lv.timeBonus;
+  document.getElementById('level-select').style.display = 'none';
+  G.focusDisorder = null;
+  showDisorderSelect();
+}
+
+function showLevelBanner(lv) {
+  document.getElementById('lbanner-name').innerHTML = lv.icon+' Level '+lv.id+': <em>'+lv.name+'</em>';
+  document.getElementById('lbanner-theme').textContent = lv.theme+' \u2014 '+lv.desc.slice(0,60)+'...';
+  document.getElementById('lbanner-mult').textContent = '\u00d7'+lv.pointMult.toFixed(1)+' point multiplier \u00b7 '+G.hintsLeft+' hints available';
+  document.getElementById('level-banner').classList.add('show');
+  // Style banner with level color
+  document.getElementById('level-banner').style.borderColor = lv.color+'44';
+}
+
+function dismissBanner() {
+  document.getElementById('level-banner').classList.remove('show');
+  // Start the actual game
+  const gameEl = document.getElementById('game');
+  gameEl.style.display = 'grid';
+  if (!G.pos || Object.keys(G.pos).length===0) {
+    initPositions(); renderBubbles(); renderRoster();
+    renderAchievements(); renderScenList();
+  }
+  updateLevelHeader();
+  startTimer();
+  requestAnimationFrame(loop);
+  setTimeout(nextMission, 600);
+}
+
+function updateLevelHeader() {
+  const lv = GAME_LEVELS.find(l => l.id===G.chosenGameLevel);
+  if (!lv) return;
+  document.getElementById('hlevel-icon').textContent = lv.icon;
+  document.getElementById('lvl').textContent = 'L'+lv.id;
+  document.getElementById('hlevel-name').textContent = lv.name;
+  document.getElementById('hlevel-wrap') && (document.getElementById('hlevel-wrap').style.borderColor = lv.color+'44');
+  // Update hint counter display
+  updateHintUI();
+}
+
+// ── POSITIONS & BUBBLES ──────────────────────────────────────
+function initPositions() {
+  const vp = document.getElementById('stage');
+  const W = vp.clientWidth, H = vp.clientHeight;
+  const cx = W/2, cy = H/2;
+  const inner = CELLS.slice(0,5), outer = CELLS.slice(5,11);
+  const ri = Math.min(W,H)*.17, ro = Math.min(W,H)*.32;
+  inner.forEach((cell, i) => {
+    const a = (i/inner.length)*Math.PI*2 - Math.PI/2;
+    G.pos[cell.id] = {x: cx+Math.cos(a)*ri, y: cy+Math.sin(a)*ri};
+    G.vel[cell.id] = {vx:(Math.random()-.5)*.14, vy:(Math.random()-.5)*.14};
+  });
+  outer.forEach((cell, i) => {
+    const a = (i/outer.length)*Math.PI*2 - Math.PI/6;
+    G.pos[cell.id] = {x: cx+Math.cos(a)*ro, y: cy+Math.sin(a)*ro};
+    G.vel[cell.id] = {vx:(Math.random()-.5)*.14, vy:(Math.random()-.5)*.14};
+  });
+}
+
+function renderBubbles() {
+  const vp = document.getElementById('stage');
+  CELLS.forEach(cell => {
+    const pos = G.pos[cell.id];
+    const isYou = cell.id === G.pid;
+    const d = document.createElement('div');
+    d.className = 'fbub' + (isYou ? ' you-cell' : '');
+    d.id = 'fb-'+cell.id;
+    d.style.cssText = 'left:'+(pos.x-35)+'px;top:'+(pos.y-35)+'px;--cc:'+cell.color;
+    const bw = isYou ? '2.5px' : '1.5px';
+    d.innerHTML =
+      '<div class="fnm">'+cell.name+(isYou ? ' <span class="ytag">YOU</span>' : '')+'</div>' +
+      '<div class="finn" style="background:'+cell.bg+';border:'+bw+' solid '+cell.color+'">' +
+        '<div class="fr1" style="border-color:'+cell.color+'"></div>' +
+        '<div class="fr2" style="border-color:'+cell.color+'"></div>' +
+        '<div class="fr3" style="border-color:'+cell.color+'"></div>' +
+        '<span style="position:relative;z-index:1">'+cell.emoji+'</span>' +
+      '</div>' +
+      '<div class="ftp">'+cell.type+'</div>';
+    d.onclick = () => showMolTip(cell);
+    vp.appendChild(d);
+  });
+}
+
+function animBubbles() {
+  const vp = document.getElementById('stage');
+  const W = vp.clientWidth, H = vp.clientHeight;
+  CELLS.forEach(cell => {
+    const p = G.pos[cell.id], v = G.vel[cell.id];
+    if (!p) return;
+    p.x += v.vx; p.y += v.vy;
+    if (p.x<40||p.x>W-40) v.vx *= -1;
+    if (p.y<52||p.y>H-52) v.vy *= -1;
+    const el = document.getElementById('fb-'+cell.id);
+    if (el) { el.style.left=(p.x-35)+'px'; el.style.top=(p.y-35)+'px'; }
+  });
+}
+
+function showMolTip(cell) {
+  const tt = document.getElementById('mol-tip');
+  tt.innerHTML = '<strong>'+cell.name+' \u2014 '+cell.type+'</strong>'+cell.fact;
+  tt.style.display = 'block';
+  const el = document.getElementById('fb-'+cell.id);
+  if (el) { const r = el.getBoundingClientRect(); tt.style.left=(r.right+8)+'px'; tt.style.top=r.top+'px'; }
+  setTimeout(() => tt.style.display='none', 4000);
+}
+
+// ── SIGNALS, REACTIONS, BUBBLES ──────────────────────────────
+function fireSignal(fromId, toId) {
+  const canvas = document.getElementById('sigc');
+  const vp = document.getElementById('stage');
+  canvas.width = vp.clientWidth; canvas.height = vp.clientHeight;
+  const ctx = canvas.getContext('2d');
+  const A = G.pos[fromId], B = G.pos[toId];
+  if (!A||!B) return;
+  const cell = CELLS.find(c => c.id===fromId);
+  const col = cell ? cell.color : '#389bff';
+  const h = col.replace('#','');
+  const cr=parseInt(h.slice(0,2),16), cg=parseInt(h.slice(2,4),16), cb=parseInt(h.slice(4,6),16);
+  let t = 0;
+  const id = setInterval(() => {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    t += .04;
+    if (t>=1) { clearInterval(id); ctx.clearRect(0,0,canvas.width,canvas.height); return; }
+    ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.lineTo(B.x,B.y);
+    ctx.strokeStyle='rgba('+cr+','+cg+','+cb+',.15)'; ctx.lineWidth=1;
+    ctx.setLineDash([5,5]); ctx.stroke(); ctx.setLineDash([]);
+    const px=A.x+(B.x-A.x)*t, py=A.y+(B.y-A.y)*t;
+    ctx.beginPath(); ctx.arc(px,py,5,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.shadowBlur=14; ctx.shadowColor=col; ctx.fill(); ctx.shadowBlur=0;
+    ctx.beginPath(); ctx.arc(px,py,11,0,Math.PI*2);
+    ctx.fillStyle='rgba('+cr+','+cg+','+cb+',.18)'; ctx.fill();
+  }, 16);
+}
+
+function showReaction(cellId, emoji) {
+  const vp = document.getElementById('stage'), pos = G.pos[cellId];
+  if (!pos) return;
+  const d = document.createElement('div'); d.className = 'rpop';
+  const arr = REACTIONS[cellId] || ['✨'];
+  d.textContent = emoji || arr[Math.floor(Math.random()*arr.length)];
+  d.style.left = (pos.x-10)+'px'; d.style.top = (pos.y-50)+'px';
+  vp.appendChild(d); setTimeout(() => d.remove(), 1900);
+}
+
+function showSpeechBubble(cellId, text) {
+  const vp = document.getElementById('stage'), pos = G.pos[cellId];
+  if (!pos) return;
+  const cell = CELLS.find(c => c.id===cellId);
+  vp.querySelectorAll('.sbub[data-c="'+cellId+'"]').forEach(e => e.remove());
+  const el = document.createElement('div'); el.className='sbub'; el.dataset.c=cellId;
+  el.style.borderColor = (cell ? cell.color : '#389bff')+'77';
+  el.textContent = text.length>100 ? text.slice(0,97)+'...' : text;
+  el.style.left = Math.min(Math.max(pos.x-12, 6), vp.clientWidth-205)+'px';
+  el.style.top = Math.max(pos.y-108, 6)+'px';
+  vp.appendChild(el);
+  setTimeout(() => { el.style.transition='opacity .4s'; el.style.opacity='0'; setTimeout(() => el.remove(),450); }, 5000);
+}
+
+function setTalking(cellId) {
+  const bub=document.getElementById('fb-'+cellId);
+  const card=document.getElementById('cc-'+cellId);
+  const st=document.getElementById('cst-'+cellId);
+  bub && bub.classList.add('pulsing');
+  card && card.classList.add('talking');
+  if (st) { st.innerHTML='<span class="csd"></span>&#9679; speaking&hellip;'; st.className='cst sp'; }
+  showReaction(cellId);
+  setTimeout(() => {
+    bub && bub.classList.remove('pulsing');
+    card && card.classList.remove('talking');
+    const cell = CELLS.find(c => c.id===cellId);
+    if (st) { st.innerHTML='<span class="csd"></span>'+(cell?cell.status:'idle'); st.className='cst'; }
+  }, 4000);
+}
+
+// ── ROSTER ────────────────────────────────────────────────────
+function renderRoster() {
+  const panel = document.getElementById('roster');
+  panel.querySelectorAll(':not(.ph)').forEach(e => e.remove());
+  CELLS.filter(cell => cell.id !== 'pi').forEach(cell => {
+    const isYou = cell.id === G.pid;
+    const d = document.createElement('div');
+    d.className = 'cc'+(isYou?' you':''); d.id='cc-'+cell.id;
+    d.style.setProperty('--cc', cell.color);
+    d.innerHTML =
+      '<div class="cct"><div class="cav" style="background:'+cell.bg+';border-color:'+cell.color+'">'+cell.emoji+'</div>' +
+      '<div style="flex:1;min-width:0"><div class="cn">'+cell.name+(isYou?'<span class="ytag">YOU</span>':'')+'</div>' +
+      '<div class="cr">'+cell.role+'</div></div></div>' +
+      '<span class="cbadge" style="--cc:'+cell.color+'">'+cell.type+'</span>' +
+      '<div class="cst" id="cst-'+cell.id+'"><span class="csd"></span>'+cell.status+'</div>';
+    d.onclick = () => showMolTip(cell);
+    panel.appendChild(d);
+  });
+  const piCell = CELLS.find(c => c.id==='pi');
+  if (piCell) {
+    const sep = document.createElement('div');
+    sep.className='ph'; sep.style.marginTop='6px'; sep.textContent='Lab PI';
+    panel.appendChild(sep);
+    const isYou = piCell.id === G.pid;
+    const d = document.createElement('div');
+    d.className='cc'+(isYou?' you':''); d.id='cc-pi';
+    d.style.setProperty('--cc', piCell.color);
+    d.innerHTML =
+      '<div class="cct"><div class="cav" style="background:'+piCell.bg+';border-color:'+piCell.color+'">'+piCell.emoji+'</div>' +
+      '<div style="flex:1;min-width:0"><div class="cn">'+piCell.name+(isYou?'<span class="ytag">YOU</span>':'')+'</div>' +
+      '<div class="cr">'+piCell.role+'</div></div></div>' +
+      '<span class="cbadge" style="--cc:'+piCell.color+'">'+piCell.type+'</span>' +
+      '<div class="cst" id="cst-pi"><span class="csd"></span>'+piCell.status+'</div>';
+    d.onclick = () => showMolTip(piCell);
+    panel.appendChild(d);
+  }
+}
+
+// ── HINTS ─────────────────────────────────────────────────────
+function updateHintUI() {
+  const btn = document.getElementById('hint-btn');
+  if (!btn) return;
+  const lv = GAME_LEVELS.find(l => l.id===G.chosenGameLevel);
+  const cost = lv ? lv.hintCost : 0;
+  btn.disabled = G.hintsLeft <= 0 || G.hintShowing;
+  btn.innerHTML = '&#128161; Hint ' +
+    '<span class="hint-count">'+G.hintsLeft+'</span> left' +
+    (cost>0 ? ' <span style="font-size:9px;opacity:.7">(-'+cost+'pts)</span>' : ' <span style="font-size:9px;color:var(--ac2)">free</span>');
+}
+
+function useHint() {
+  if (G.hintsLeft <= 0 || G.hintShowing) return;
+  const m = G.currentMissions[G.midx];
+  if (!m || !m.hint) return;
+  G.hintsLeft--;
+  G.hintsUsed++;
+  G.hintShowing = true;
+  G.levelHintUsed = true;
+  // Deduct points based on level
+  const lv = GAME_LEVELS.find(l => l.id===G.chosenGameLevel);
+  const cost = lv ? lv.hintCost : 0;
+  if (cost > 0) {
+    G.score = Math.max(0, G.score - cost);
+    showScorePop('-'+cost+'pts hint', document.getElementById('hint-btn'), 'var(--amber)');
+    updateUI();
+  }
+  // Show hint box
+  const hbox = document.getElementById('hint-box');
+  if (hbox) {
+    hbox.innerHTML = '<span class="hint-icon">&#128161;</span><strong>Hint:</strong> '+m.hint;
+    hbox.classList.add('show');
+  }
+  updateHintUI();
+  // Animate speaker cell
+  showReaction(m.speaker, '💡');
+}
+
+// ── MISSIONS ─────────────────────────────────────────────────
+function nextMission() {
+  if (G.midx >= G.currentMissions.length) { triggerLevelComplete(); return; }
+  const m = G.currentMissions[G.midx];
+  G.scPlayed.add(m.sc);
+  G.answerTime = Date.now();
+  G.hintShowing = false;
+  // Update header
+  document.getElementById('mround').textContent = 'mission '+(G.midx+1)+'/'+G.currentMissions.length;
+  document.getElementById('sscen').textContent = m.sc;
+  // Mission panel
+  document.getElementById('mtitle').textContent = m.title;
+  document.getElementById('mdesc').textContent = m.narr;
+  const pct = Math.round(G.midx/G.currentMissions.length*100);
+  document.getElementById('mpbar').style.width = pct+'%';
+  document.getElementById('mptxt').textContent = G.midx+'/'+G.currentMissions.length;
+  // Scenario buttons
+  document.querySelectorAll('.sb2').forEach(b => b.classList.toggle('asc', b.dataset.s===m.sc));
+  // Animate cells
+  setTalking(m.speaker);
+  showSpeechBubble(m.speaker, m.narr.slice(0,85));
+  fireSignal(m.speaker, m.listener);
+  // Render choices with hint button
+  document.getElementById('choices').innerHTML = '';
+  setTimeout(() => renderChoices(m), 1200);
+}
+
+function renderChoices(m) {
+  const wrap = document.getElementById('choices');
+  const lv = GAME_LEVELS.find(l => l.id===G.chosenGameLevel);
+  // Question row
+  const qDiv = document.createElement('div');
+  qDiv.style.cssText = 'font-size:12px;color:var(--tx2);font-weight:500;flex-basis:100%;margin-bottom:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;';
+  qDiv.innerHTML = '<span style="flex:1">'+m.q+'</span>';
+  // Hint button inline with question
+  const hintBtn = document.createElement('button');
+  hintBtn.className = 'hint-btn'; hintBtn.id = 'hint-btn';
+  hintBtn.onclick = useHint;
+  wrap.appendChild(qDiv);
+  qDiv.appendChild(hintBtn);
+  // Hint display box
+  const hintBox = document.createElement('div');
+  hintBox.className = 'hint-box'; hintBox.id = 'hint-box';
+  wrap.appendChild(hintBox);
+  // Choices
+  const shuffled = [...m.choices].sort(() => Math.random()-.5);
+  shuffled.forEach((ch, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ch';
+    btn.innerHTML = ch.t + (ch.mol ? '<div class="ch-mol">'+ch.mol+'</div>' : '');
+    btn.onclick = () => handleAnswer(btn, ch, m, shuffled);
+    wrap.appendChild(btn);
+  });
+  updateHintUI();
+}
+
+function handleAnswer(btn, choice, mission, allChoices) {
+  document.querySelectorAll('.ch').forEach(b => b.disabled = true);
+  const hintBtn = document.getElementById('hint-btn');
+  if (hintBtn) hintBtn.disabled = true;
+  const elapsed = (Date.now() - G.answerTime) / 1000;
+  if (elapsed < 3) G.fastAnswer = true;
+  const lv = GAME_LEVELS.find(l => l.id===G.chosenGameLevel);
+  const mult = lv ? lv.pointMult : 1;
+
+  if (choice.ok) {
+    btn.classList.add('correct');
+    const spd = elapsed < 3 ? 50 : 0;
+    const str = G.streak >= 3 ? G.streak*20 : 0;
+    const base = Math.round(mission.pts * mult);
+    const pts = base + spd + str;
+    G.score += pts; G.streak++; G.correct++;
+    G.bstreak = Math.max(G.bstreak, G.streak);
+    G.xp += mission.xp + (G.streak>2 ? 10 : 0);
+    if (mission.speaker==='pi') G.piMission = true;
+    G.scDone.add(mission.sc);
+    let popTxt = '+'+pts;
+    if (spd) popTxt += '⚡';
+    if (str) popTxt += '🔥';
+    if (mult>1) popTxt += ' (×'+mult.toFixed(1)+')';
+    showScorePop(popTxt, btn, 'var(--ac2)');
+    showReaction(mission.speaker, '✅');
+    showReaction(G.pid, '💡');
+    fireSignal(G.pid, mission.speaker);
+    if (choice.mol && MOLECULES[choice.mol]) {
+      showSpeechBubble(mission.speaker, choice.mol+': '+MOLECULES[choice.mol].slice(0,60));
+    }
+  } else {
+    btn.classList.add('wrong');
+    // Reveal correct answer
+    document.querySelectorAll('.ch').forEach(b => {
+      const matchCh = allChoices.find(c => c.ok && b.innerHTML.includes(c.t.slice(0,25)));
+      if (matchCh) b.classList.add('correct');
+    });
+    G.streak = 0; G.wrong++;
+    showScorePop('miss', btn, 'var(--red)');
+    showReaction(mission.speaker, '❌');
+  }
+
+  G.msgs++; document.getElementById('sm').textContent = G.msgs;
+  updateUI();
+  checkAchievements();
+  G.midx++;
+  setTimeout(nextMission, 2200);
+}
+
+// ── LEVEL COMPLETE ────────────────────────────────────────────
+function triggerLevelComplete() {
+  G.levelsCompleted.add(G.chosenGameLevel);
+  if (!G.levelHintUsed) G.levelNoHint = true;
+  checkAchievements();
+  // Check if all 5 levels done
+  if (G.levelsCompleted.size >= 5) { triggerWin(); return; }
+  // Show level complete banner then go back to level select
+  const lv = GAME_LEVELS.find(l => l.id===G.chosenGameLevel);
+  const bonus = G.levelNoHint ? 200 : 0;
+  if (bonus) { G.score += bonus; showScorePop('+'+bonus+' no-hint bonus!', null, 'var(--amber)'); }
+  setTimeout(() => {
+    document.getElementById('game').style.display = 'none';
+    document.getElementById('level-select').style.display = 'flex';
+    renderLevelCards();
+  }, 2000);
+}
+
+// ── UI ────────────────────────────────────────────────────────
+function updateUI() {
+  document.getElementById('score-n').textContent = G.score.toLocaleString();
+  document.getElementById('streak-n').textContent = '\u00d7'+Math.max(1,G.streak);
+  document.getElementById('sc').textContent = G.correct;
+  document.getElementById('sw').textContent = G.wrong;
+  document.getElementById('ss').textContent = G.bstreak;
+  while (G.xp >= G.xpnext) {
+    G.xp -= G.xpnext; G.level++;
+    G.xpnext = Math.floor(G.xpnext*1.4);
+    showScorePop('LEVEL '+G.level+'!', null, 'var(--amber)');
+  }
+  document.getElementById('xpbar').style.width = Math.round(G.xp/G.xpnext*100)+'%';
+  document.getElementById('xptxt').textContent = G.xp+' / '+G.xpnext;
+}
+
+function showScorePop(text, refBtn, color) {
+  const d = document.createElement('div'); d.className='spop';
+  d.style.color = color||'var(--ac2)'; d.textContent = text;
+  if (refBtn) { const r=refBtn.getBoundingClientRect(); d.style.left=r.left+'px'; d.style.top=(r.top-30)+'px'; }
+  else { d.style.left='50%'; d.style.top='40%'; d.style.transform='translateX(-50%)'; }
+  document.body.appendChild(d); setTimeout(() => d.remove(), 1500);
+}
+
+// ── ACHIEVEMENTS ─────────────────────────────────────────────
+function checkAchievements() {
+  ACHIEVEMENTS.forEach(ach => {
+    if (!G.unlocked.has(ach.id) && ach.fn(G)) {
+      G.unlocked.add(ach.id);
+      showAchToast(ach);
+      renderAchievements();
+    }
+  });
+}
+function renderAchievements() {
+  const grid = document.getElementById('achgrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  ACHIEVEMENTS.forEach(ach => {
+    const on = G.unlocked.has(ach.id);
+    const d = document.createElement('div'); d.className='ach '+(on?'on':'off');
+    d.title = ach.desc;
+    d.innerHTML = '<div class="ach-e">'+ach.e+'</div><div><div class="ach-n">'+ach.name+'</div><div class="ach-d">'+ach.desc+'</div></div>';
+    grid.appendChild(d);
+  });
+}
+function showAchToast(ach) {
+  const d = document.createElement('div'); d.className='atst';
+  d.innerHTML = '<div class="at-e">'+ach.e+'</div><div><div class="at-n">'+ach.name+'</div><div class="at-d">Achievement unlocked!</div></div>';
+  document.body.appendChild(d);
+  setTimeout(() => { d.classList.add('out'); setTimeout(() => d.remove(), 450); }, 3000);
+}
+
+// ── SCENARIO LIST ─────────────────────────────────────────────
+function renderScenList() {
+  const list = document.getElementById('scenlist');
+  if (!list) return;
+  const cfgs = [
+    {s:'inflammation',icon:'🔥',lab:true},{s:'oxygen',icon:'💨',lab:true},
+    {s:'learning',icon:'🧠',lab:true},{s:'injury',icon:'⚡',lab:true},{s:'baf53b',icon:'🔬',lab:true},
+    {s:'alzheimers',icon:'🧩',lab:false},{s:'parkinsons',icon:'🫨',lab:false},
+    {s:'schizophrenia',icon:'🌀',lab:false},{s:'autism',icon:'🌈',lab:false},
+  ];
+  cfgs.forEach(cfg => {
+    const btn = document.createElement('button'); btn.className='sb2'; btn.dataset.s=cfg.s;
+    btn.innerHTML = '<span class="sb2-icon">'+cfg.icon+'</span>'+cfg.s+'<span class="sb2-cat '+(cfg.lab?'cl':'cd')+'">'+(cfg.lab?'LAB':'DISEASE')+'</span>';
+    btn.onclick = () => jumpToScen(cfg.s);
+    list.appendChild(btn);
+  });
+}
+function jumpToScen(s) {
+  const idx = G.currentMissions.findIndex(m => m.sc===s);
+  if (idx >= 0) { G.midx = idx; nextMission(); }
+}
+
+// ── CONTROLS ─────────────────────────────────────────────────
+function pauseResume() {
+  G.paused = !G.paused;
+  document.getElementById('pbtn').textContent = G.paused ? '&#9654; Resume' : '&#9208; Pause';
+}
+function toggleHelp() { document.getElementById('help').classList.toggle('show'); }
+function endGame() { triggerWin(); }
+
+// ── TIMER ─────────────────────────────────────────────────────
+function startTimer() {
+  if (G.timerOn) return; G.timerOn = true;
+  setInterval(() => {
+    if (G.paused) return;
+    G.timer--;
+    const m = Math.floor(G.timer/60), s = G.timer%60;
+    const el = document.getElementById('timer');
+    if (!el) return;
+    el.textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    if (G.timer < 300) el.classList.add('urg');
+    if (G.timer <= 0) {
+      document.getElementById('fs2').textContent = G.score.toLocaleString();
+      document.getElementById('fc2').textContent = G.correct;
+      document.getElementById('lose').classList.add('show');
+      G.paused = true;
+    }
+  }, 1000);
+}
+
+// ── WIN ───────────────────────────────────────────────────────
+function triggerWin() {
+  G.paused = true;
+  document.getElementById('fs').textContent = G.score.toLocaleString();
+  document.getElementById('fc').textContent = G.correct;
+  document.getElementById('fst').textContent = G.bstreak;
+  const wrap = document.getElementById('wachs');
+  G.unlocked.forEach(id => {
+    const ach = ACHIEVEMENTS.find(a => a.id===id);
+    if (ach) { const d=document.createElement('div'); d.className='ovl-ach'; d.textContent=ach.e+' '+ach.name; wrap.appendChild(d); }
+  });
+  document.getElementById('win').classList.add('show');
+}
+
+// ── LOOP ─────────────────────────────────────────────────────
+function loop() { if (!G.paused) animBubbles(); requestAnimationFrame(loop); }
+
+// ── KEYBOARD ─────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const tutEl = document.getElementById('tut');
+  const titleEl = document.getElementById('title');
+  const gameEl = document.getElementById('game');
+  const lsEl = document.getElementById('level-select');
+  if (tutEl.style.display !== 'none') {
+    if (e.key==='ArrowRight'||e.key==='Enter') tutNav(1);
+    if (e.key==='ArrowLeft') tutNav(-1);
+    if (e.key==='Escape') showTitle();
+    return;
+  }
+  if (titleEl.style.display !== 'none') {
+    if (e.key==='ArrowRight') { titleIdx=Math.min(titleIdx+1,CELLS.length-1); selectCell(CELLS[titleIdx].id); }
+    if (e.key==='ArrowLeft') { titleIdx=Math.max(titleIdx-1,0); selectCell(CELLS[titleIdx].id); }
+    if (e.key==='Enter'&&G.pid) showLevelSelect();
+    return;
+  }
+  if (gameEl.style.display==='grid'||gameEl.style.display==='block') {
+    if (e.key==='h'||e.key==='H') toggleHelp();
+    if (e.key==='p'||e.key==='P') pauseResume();
+    if (e.key==='f'||e.key==='F') { if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{}); else document.exitFullscreen(); }
+    if (e.key==='?'||e.key==='i'||e.key==='I') useHint();
+    if (e.key==='Escape') document.getElementById('help').classList.remove('show');
+    if (['1','2','3','4'].includes(e.key)) {
+      const btns = document.querySelectorAll('.ch:not(:disabled)');
+      const idx = parseInt(e.key)-1;
+      if (btns[idx]) btns[idx].click();
+    }
+  }
+});
+
+// ── INIT ─────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  initNebula();
+  renderTitleCards();
+  renderTutorial();
+});
+
+
+</script>
+</body>
+</html>
