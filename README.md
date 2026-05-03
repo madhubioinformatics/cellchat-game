@@ -3,7 +3,7 @@
 Interactive neuroscience quiz game — Swarup Lab × ZotCraft 2026 @ UCI MIND
 
 ## Play Live
-**https://madhubioinformatics.github.io/cellchat-game/**
+**[https://madhubioinformatics.github.io/cellchat-game/](https://madhubioinformatics.github.io/cellchat-game/)**
 
 ## About
 CellChat: The Game puts you inside a living brain simulation.
